@@ -56,6 +56,16 @@ func ParseContent(dir Dir, filename string, content []byte) (Sequence, []error) 
 
 func (c *context) parse() {
 	for c.rd.nextLine() {
-
+		line := c.rd.currentLine()
+		switch {
+		case line.IsEmpty():
+		case line.StartsWith(">"):
+		case line.StartsWith("*"):
+		case line.StartsWith("#"):
+		case line.StartsWith("  ") || line.StartsWith("\t"):
+		case line.StartsWith("```"):
+		case line.StartsWith("{"):
+		case line.StartsWith("<{{"):
+		}
 	}
 }
