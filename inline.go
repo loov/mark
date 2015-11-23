@@ -7,7 +7,7 @@ type Inline interface {
 func (Text) TagInline()      {}
 func (Emphasis) TagInline()  {}
 func (Bold) TagInline()      {}
-func (Code) TagInline()      {}
+func (CodeSpan) TagInline()  {}
 func (LineBreak) TagInline() {}
 
 // Text is plain-text
@@ -19,8 +19,8 @@ type Emphasis string
 // Bold is text that should appear bold `<b>`
 type Bold string
 
-// InlineCode is text that should appear monospaced `<code>`
-type InlineCode string
+// CodeSpan is text that should appear monospaced `<code>`
+type CodeSpan string
 
 // LineBreak is a hard line break
 type LineBreak struct{}

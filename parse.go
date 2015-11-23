@@ -60,12 +60,27 @@ func (c *context) parse() {
 		switch {
 		case line.IsEmpty():
 		case line.StartsWith(">"):
+			c.parseQuote()
+		case line.StartsWith("***") ||
+			 line.StartsWith("---") ||
+			 line.StartsWith("___"):
+			c.parseSeparator()
 		case line.StartsWith("*"):
-		case line.StartsWith("#"):
-		case line.StartsWith("  ") || line.StartsWith("\t"):
+			c.parseList()
+		case line.StartsWith("-") || c.StartsWith("+"):
+			c.parseList()
+		case line.StartsWithNumbering():
+			c.parseNumberedList()
+		case line.StartsTitle() ||
+			c.parseSection()
+		case line.StartsWith("    ") || line.StartsWith("\t"):
+			c.parseCode()
 		case line.StartsWith("```"):
+			c.parseFenced()
 		case line.StartsWith("{"):
+			c.parseModifier()
 		case line.StartsWith("<{{"):
+			c.parseInclude()
 		}
 	}
 }
