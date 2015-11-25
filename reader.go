@@ -68,16 +68,17 @@ func (rd *reader) count(r rune) int {
 	return c
 }
 
-func (rd *reader) expectFn(valid func(r rune) bool) {
+func (rd *reader) expectFn(valid func(r rune) bool) bool {
 	r, s := utf8.DecodeRuneInString(rd.rest())
 	if s <= 0 || !valid(r) {
-		panic("invalid symbol")
+		return false
 	}
 	rd.head.at += s
+	return true
 }
 
-func (rd *reader) expect(r rune) {
-	rd.expectFn(func(x rune) bool { return x == r })
+func (rd *reader) expect(r rune) bool {
+	return rd.expectFn(func(x rune) bool { return x == r })
 }
 
 func (rd *reader) ignoreFn(valid func(r rune) bool) {

@@ -52,13 +52,13 @@ func ParseContent(dir Dir, filename string, content []byte) (Sequence, []error) 
 		reader: &reader{},
 	}
 	parse.reader.content = string(content)
-	parse.line()
+	parse.run()
 	return parse.sequence, parse.errors
 }
 
 const last = 1 << 10
 
-func (parse *parse) context(level int) *Sequence {
+func (parse *parse) currentSequence(level int) *Sequence {
 	seq := &parse.sequence
 	for {
 		if len(*seq) == 0 {
@@ -78,7 +78,7 @@ func (parse *parse) context(level int) *Sequence {
 	panic("unreachable")
 }
 
-func (parse *parse) line() {
+func (parse *parse) run() {
 	for parse.reader.nextLine() {
 		line := parse.reader.line()
 		switch {
@@ -106,7 +106,7 @@ func (parse *parse) line() {
 		case line.StartsWith("<{{"):
 			parse.include()
 		default:
-			parse.paragraph()
+			parse.line()
 		}
 	}
 }
@@ -135,10 +135,16 @@ func (parse *parse) section() {
 	if !order(1, section.Level, 6) {
 		parse.check(errors.New("Expected heading, but contained too many #"))
 		parse.reader.resetLine()
-		parse.paragraph()
+		parse.line()
 		return
 	}
-	parse.reader.expect(' ')
+
+	if !parse.reader.expect(' ') {
+		parse.check(errors.New("Expected space after leading #"))
+		parse.reader.resetLine()
+		parse.line()
+		return
+	}
 	parse.reader.ignore(' ')
 
 	parse.reader.ignoreTrailing(' ')
@@ -147,7 +153,7 @@ func (parse *parse) section() {
 
 	section.Title = parse.reader.rest()
 
-	context := parse.context(section.Level)
+	context := parse.currentSequence(section.Level)
 	*context = append(*context, section)
 }
 
@@ -167,7 +173,7 @@ func (parse *parse) include() {
 
 }
 
-func (parse *parse) paragraph() {
+func (parse *parse) line() {
 
 }
 
