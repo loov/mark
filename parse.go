@@ -56,7 +56,7 @@ func ParseContent(dir Dir, filename string, content []byte) (Sequence, []error) 
 	return parse.sequence, parse.errors
 }
 
-const last = 1 << 10
+const lastlevel = 1 << 10
 
 func (parse *parse) currentSequence(level int) *Sequence {
 	seq := &parse.sequence
@@ -153,10 +153,10 @@ func (parse *parse) section() {
 	reader.ignoreSpaceTrailing('#')
 	reader.ignoreTrailing(' ')
 
-	section.Title = reader.rest()
+	section.Title = *parse.inline()
 
-	context := parse.currentSequence(section.Level)
-	*context = append(*context, section)
+	seq := parse.currentSequence(section.Level)
+	seq.Append(section)
 }
 
 func (parse *parse) code() {
@@ -176,7 +176,30 @@ func (parse *parse) include() {
 }
 
 func (parse *parse) line() {
+	reader := parse.reader
 
+	reader.ignore(' ')
+	reader.ignoreTrailing(' ')
+
+	line := parse.inline()
+
+	seq := parse.currentSequence(lastlevel)
+	if len(*seq) == 0 {
+		seq.Append(line)
+	} else {
+		if para, ok := (*seq)[len(*seq)-1].(*Paragraph); ok {
+			para.AppendLine(line)
+		} else {
+			seq.Append(line)
+		}
+	}
+}
+
+func (parse *parse) inline() *Paragraph {
+	reader := parse.reader
+	items := &Paragraph{}
+	items.Append(Text(reader.rest()))
+	return items
 }
 
 func order(xs ...int) bool {

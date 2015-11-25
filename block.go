@@ -14,13 +14,44 @@ func (Modifier) TagBlock()  {}
 // Sequence is a container of blocks
 type Sequence []Block
 
+func (s *Sequence) Append(block Block) {
+	*s = append(*s, block)
+}
+
 // Paragraph represents a `<p>`
-type Paragraph []Inline
+type Paragraph struct {
+	Items []Inline
+}
+
+func (p *Paragraph) Append(next Inline) {
+	if last := len(p.Items) - 1; last >= 0 {
+		prev := p.Items[last]
+		if x, ok := Join(prev, next); ok {
+			p.Items[last] = x
+			return
+		}
+	}
+	p.Items = append(p.Items, next)
+}
+
+func (leading *Paragraph) AppendLine(trailing *Paragraph) {
+	if len(trailing.Items) == 0 {
+		return
+	}
+
+	if len(leading.Items) > 0 {
+		leading.Append(Text(" "))
+	}
+
+	for _, inline := range trailing.Items {
+		leading.Append(inline)
+	}
+}
 
 // Section contains information about a titled Sequence `<section>`
 type Section struct {
 	Level   int
-	Title   string
+	Title   Paragraph
 	Content Sequence
 	Notes   []Note
 }

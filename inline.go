@@ -1,5 +1,7 @@
 package mark
 
+import "reflect"
+
 type Inline interface {
 	TagInline()
 }
@@ -50,4 +52,18 @@ func (InlineModifier) TagInline() {}
 type InlineModifier struct {
 	Class  string
 	Inline Inline
+}
+
+func Join(a, b Inline) (Inline, bool) {
+	av, bv := reflect.ValueOf(a), reflect.ValueOf(b)
+	if av.Type() != bv.Type() {
+		return nil, false
+	}
+	if av.Kind() != reflect.String {
+		return nil, false
+	}
+
+	x := av.String() + bv.String()
+	xv := reflect.ValueOf(x).Convert(av.Type())
+	return xv.Interface().(Inline), true
 }
