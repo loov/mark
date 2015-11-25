@@ -23,6 +23,8 @@ type Paragraph struct {
 	Items []Inline
 }
 
+func (p *Paragraph) IsEmpty() bool { return len(p.Items) == 0 }
+
 func (p *Paragraph) Append(next Inline) {
 	if last := len(p.Items) - 1; last >= 0 {
 		prev := p.Items[last]
