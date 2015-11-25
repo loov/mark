@@ -1,30 +1,31 @@
 package mark
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 )
 
-type context struct {
-	dir  Dir
-	path string
-	rd   *reader
+type parse struct {
+	dir    Dir
+	path   string
+	reader *reader
 	*state
 }
 
 type ParseError struct {
 	Path string
-	At   int
+	Line int
 	Err  error
 }
 
 func (err *ParseError) Error() string {
-	return fmt.Sprintf("%s line %d: %s", err.Path, err.At, err.Err)
+	return fmt.Sprintf("%s:%d: %s", err.Path, err.Line, err.Err)
 }
 
-func (c *context) check(err error) {
+func (parse *parse) check(err error) {
 	if err != nil {
-		c.errors = append(c.errors, &ParseError{c.path, c.rd.head.start, err})
+		parse.errors = append(parse.errors, &ParseError{parse.path, parse.reader.head.line, err})
 	}
 }
 
@@ -44,93 +45,142 @@ func ParseFile(filename string) (Sequence, []error) {
 }
 
 func ParseContent(dir Dir, filename string, content []byte) (Sequence, []error) {
-	c := &context{
-		dir:   dir,
-		path:  filename,
-		state: &state{},
-		rd:    &reader{},
+	parse := &parse{
+		dir:    dir,
+		path:   filename,
+		state:  &state{},
+		reader: &reader{},
 	}
-	c.rd.content = string(content)
-	c.parse()
-	return c.sequence, c.errors
+	parse.reader.content = string(content)
+	parse.line()
+	return parse.sequence, parse.errors
 }
 
-func (c *context) parse() {
-	for c.rd.nextLine() {
-		line := c.rd.currentLine()
+const last = 1 << 10
+
+func (parse *parse) context(level int) *Sequence {
+	seq := &parse.sequence
+	for {
+		if len(*seq) == 0 {
+			return seq
+		}
+
+		if sec, ok := (*seq)[len(*seq)-1].(*Section); ok {
+			if sec.Level >= level {
+				return seq
+			} else {
+				seq = &sec.Content
+			}
+		} else {
+			return seq
+		}
+	}
+	panic("unreachable")
+}
+
+func (parse *parse) line() {
+	for parse.reader.nextLine() {
+		line := parse.reader.line()
 		switch {
 		case line.IsEmpty():
 		case line.StartsWith(">"):
-			c.quote()
+			parse.quote()
 		case line.StartsWith("***") ||
 			line.StartsWith("---") ||
 			line.StartsWith("___"):
-			c.separator()
+			parse.separator()
 		case line.StartsWith("*"):
-			c.list()
+			parse.list()
 		case line.StartsWith("-") || line.StartsWith("+"):
-			c.list()
+			parse.list()
 		case line.StartsWithNumbering():
-			c.numlist()
+			parse.numlist()
 		case line.StartsTitle():
-			c.section()
+			parse.section()
 		case line.StartsWith("    ") || line.StartsWith("\t"):
-			c.code()
+			parse.code()
 		case line.StartsWith("```"):
-			c.fenced()
+			parse.fenced()
 		case line.StartsWith("{"):
-			c.modifier()
+			parse.modifier()
 		case line.StartsWith("<{{"):
-			c.include()
+			parse.include()
 		default:
-			c.paragraph()
+			parse.paragraph()
 		}
 	}
 }
 
-func (c *context) quote() {
+func (parse *parse) quote() {
 
 }
 
-func (c *context) separator() {
+func (parse *parse) separator() {
 
 }
 
-func (c *context) list() {
+func (parse *parse) list() {
 
 }
 
-func (c *context) numlist() {
+func (parse *parse) numlist() {
 
 }
 
-func (c *context) section() {
-	section := Section{}
+func (parse *parse) section() {
+	section := &Section{}
 
-	c.rd.ignore3spaces()
-	section.Level = c.rd.count('#')
-	c.rd.expect(' ')
-	section.Title = c.rd.rest()
+	parse.reader.ignore3()
+	section.Level = parse.reader.count('#')
+	if !order(1, section.Level, 6) {
+		parse.check(errors.New("Expected heading, but contained too many #"))
+		parse.reader.resetLine()
+		parse.paragraph()
+		return
+	}
+	parse.reader.expect(' ')
+	parse.reader.ignore(' ')
 
-	c.state.sequence = append(c.state.sequence, section)
+	parse.reader.ignoreTrailing(' ')
+	parse.reader.ignoreSpaceTrailing('#')
+	parse.reader.ignoreTrailing(' ')
+
+	section.Title = parse.reader.rest()
+
+	context := parse.context(section.Level)
+	*context = append(*context, section)
 }
 
-func (c *context) code() {
+func (parse *parse) code() {
 
 }
 
-func (c *context) fenced() {
+func (parse *parse) fenced() {
 
 }
 
-func (c *context) modifier() {
+func (parse *parse) modifier() {
 
 }
 
-func (c *context) include() {
+func (parse *parse) include() {
 
 }
 
-func (c *context) paragraph() {
+func (parse *parse) paragraph() {
 
+}
+
+func order(xs ...int) bool {
+	if len(xs) == 0 {
+		return true
+	}
+	p := xs[0]
+	for _, x := range xs[1:] {
+		if p > x {
+			return false
+		}
+		p = x
+	}
+	return true
 }

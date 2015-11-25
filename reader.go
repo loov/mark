@@ -3,6 +3,7 @@ package mark
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 type reader struct {
@@ -11,19 +12,19 @@ type reader struct {
 }
 
 type span struct {
+	line  int
 	start int
+	at    int
 	stop  int
 	end   int
 }
 
-func (rd *reader) HasPrefix(x string) bool {
-	return strings.HasPrefix(rd.content[rd.head.start:], x)
-}
-
 func (rd *reader) nextLine() bool {
+	rd.head.line++
 	rd.head.start = rd.head.end
+	rd.head.at = rd.head.end
 
-	off := strings.IndexAny(rd.content[rd.head.start:], "\rd\n")
+	off := strings.IndexAny(rd.content[rd.head.start:], "\r\n")
 	if off < 0 {
 		return false
 	}
@@ -37,14 +38,18 @@ func (rd *reader) nextLine() bool {
 		rd.head.end++
 	}
 
+	rd.head.end++
 	return true
 }
 
-func (rd *reader) ignore3spaces() {
+func (rd *reader) resetLine() { rd.head.at = rd.head.start }
+
+// ignores 0-3 spaces
+func (rd *reader) ignore3() {
 	for p := 0; p < 3; p++ {
-		if rd.head.start < rd.head.stop &&
-			rd.content[rd.head.start] == ' ' {
-			rd.head.start++
+		if rd.head.at < rd.head.stop &&
+			rd.content[rd.head.at] == ' ' {
+			rd.head.at++
 		} else {
 			break
 		}
@@ -53,9 +58,9 @@ func (rd *reader) ignore3spaces() {
 
 func (rd *reader) count(r rune) int {
 	c := 0
-	for off, x := range rd.content[rd.head.start:rd.head.stop] {
+	for off, x := range rd.content[rd.head.at:rd.head.stop] {
 		if x != r {
-			rd.head.start += off
+			rd.head.at += off
 			break
 		}
 		c++
@@ -63,16 +68,53 @@ func (rd *reader) count(r rune) int {
 	return c
 }
 
-func (rd *reader) rest() string {
-	return string(rd.currentLine())
+func (rd *reader) expectFn(valid func(r rune) bool) {
+	r, s := utf8.DecodeRuneInString(rd.rest())
+	if s <= 0 || !valid(r) {
+		panic("invalid symbol")
+	}
+	rd.head.at += s
 }
 
 func (rd *reader) expect(r rune) {
-	if rd.head.start >= rd.head.stop ||
-		rd.content[rd.head.start] != ' ' {
-		panic("expected " + string(r))
+	rd.expectFn(func(x rune) bool { return x == r })
+}
+
+func (rd *reader) ignoreFn(valid func(r rune) bool) {
+	for {
+		r, s := utf8.DecodeRuneInString(rd.rest())
+		if s <= 0 || !valid(r) {
+			return
+		}
+		rd.head.at += s
 	}
-	rd.head.start++
+}
+
+func (rd *reader) ignore(r rune) {
+	rd.ignoreFn(func(x rune) bool { return x == r })
+}
+
+func (rd *reader) ignoreTrailing(r rune) {
+	if utf8.RuneLen(r) > 1 {
+		panic("unimplemented for trailing large runes")
+	}
+	for rd.head.at < rd.head.stop && rune(rd.content[rd.head.stop-1]) == r {
+		rd.head.stop--
+	}
+}
+
+func (rd *reader) ignoreSpaceTrailing(r rune) {
+	if utf8.RuneLen(r) > 1 {
+		panic("unimplemented for trailing large runes")
+	}
+
+	stop := rd.head.stop
+	for rd.head.at < stop && rune(rd.content[stop-1]) == r {
+		stop--
+	}
+	if rd.head.at < stop && rune(rd.content[stop-1]) == ' ' {
+		rd.head.stop = stop - 1
+	}
 }
 
 type line string
@@ -106,16 +148,21 @@ func (line line) StartsWithNumbering() bool {
 func (line line) StartsTitle() bool {
 	for i, r := range line.trim3() {
 		if r != '#' {
-			if r != ' ' {
+			if !unicode.IsSpace(r) {
 				return false
 			}
-			return 1 <= i && i <= 6
+			return 1 <= i
 		}
 	}
 	return false
 }
 
 // returns current line, excluding line-feeds
-func (rd *reader) currentLine() line {
+func (rd *reader) line() line {
 	return line(rd.content[rd.head.start:rd.head.stop])
+}
+
+// returns unparsed part of current line, excluding line-feeds
+func (rd *reader) rest() string {
+	return string(rd.content[rd.head.at:rd.head.stop])
 }

@@ -8,8 +8,8 @@ import (
 func main() {
 	pretty.Printf("Parsing example.md\n")
 	sequence, errs := mark.ParseFile("example.md")
-	for i, err := range errs {
-		pretty.Printf("E%02d: %v\n", i, err)
+	for _, err := range errs {
+		pretty.Printf("%v\n", err)
 	}
 	pretty.Printf("%# v\n", sequence)
 }
