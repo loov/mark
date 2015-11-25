@@ -79,8 +79,9 @@ func (parse *parse) currentSequence(level int) *Sequence {
 }
 
 func (parse *parse) run() {
-	for parse.reader.nextLine() {
-		line := parse.reader.line()
+	reader := parse.reader
+	for reader.nextLine() {
+		line := reader.line()
 		switch {
 		case line.IsEmpty():
 		case line.StartsWith(">"):
@@ -128,30 +129,31 @@ func (parse *parse) numlist() {
 }
 
 func (parse *parse) section() {
+	reader := parse.reader
 	section := &Section{}
 
-	parse.reader.ignore3()
-	section.Level = parse.reader.count('#')
+	reader.ignore3()
+	section.Level = reader.count('#')
 	if !order(1, section.Level, 6) {
 		parse.check(errors.New("Expected heading, but contained too many #"))
-		parse.reader.resetLine()
+		reader.resetLine()
 		parse.line()
 		return
 	}
 
-	if !parse.reader.expect(' ') {
+	if !reader.expect(' ') {
 		parse.check(errors.New("Expected space after leading #"))
-		parse.reader.resetLine()
+		reader.resetLine()
 		parse.line()
 		return
 	}
-	parse.reader.ignore(' ')
+	reader.ignore(' ')
 
-	parse.reader.ignoreTrailing(' ')
-	parse.reader.ignoreSpaceTrailing('#')
-	parse.reader.ignoreTrailing(' ')
+	reader.ignoreTrailing(' ')
+	reader.ignoreSpaceTrailing('#')
+	reader.ignoreTrailing(' ')
 
-	section.Title = parse.reader.rest()
+	section.Title = reader.rest()
 
 	context := parse.currentSequence(section.Level)
 	*context = append(*context, section)
