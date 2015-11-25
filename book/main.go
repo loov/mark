@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 
 	"github.com/kr/pretty"
+
 	"github.com/loov/mark"
+	"github.com/loov/mark/html"
 )
 
 func main() {
@@ -15,7 +17,8 @@ func main() {
 		pretty.Printf("%v\n", err)
 	}
 	pretty.Printf("\n%# v\n", sequence)
-	result := sequence.HTML()
+
+	result := html.Convert(sequence)
 	ioutil.WriteFile("~example.html", []byte(result), 0755)
-	fmt.Println(sequence.HTML())
+	fmt.Println(result)
 }
