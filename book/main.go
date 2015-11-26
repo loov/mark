@@ -19,6 +19,10 @@ func main() {
 	pretty.Printf("\n%# v\n", sequence)
 
 	result := html.Convert(sequence)
-	ioutil.WriteFile("~example.html", []byte(result), 0755)
+	ioutil.WriteFile("~example.html", []byte(`
+		<style>
+			body { width: 500px; margin: 1em auto; }
+		</style>
+	`+result), 0755)
 	fmt.Println(result)
 }
