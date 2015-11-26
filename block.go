@@ -20,7 +20,8 @@ func (s *Sequence) Append(block Block) {
 
 // Paragraph represents a `<p>`
 type Paragraph struct {
-	Items []Inline
+	Items  []Inline
+	closed bool
 }
 
 func (p *Paragraph) IsEmpty() bool { return len(p.Items) == 0 }
@@ -35,6 +36,8 @@ func (p *Paragraph) Append(next Inline) {
 	}
 	p.Items = append(p.Items, next)
 }
+
+func (p *Paragraph) Close() { p.closed = true }
 
 func (leading *Paragraph) AppendLine(trailing *Paragraph) {
 	if len(trailing.Items) == 0 {

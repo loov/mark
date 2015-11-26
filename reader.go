@@ -121,7 +121,7 @@ func (rd *reader) ignoreSpaceTrailing(r rune) {
 type line string
 
 func (line line) trim3() string {
-	for p := 0; p < 3 && p < len(line); p++ {
+	for p := 0; p <= 3 && p < len(line); p++ {
 		if line[p] != ' ' {
 			return string(line[p:])
 		}

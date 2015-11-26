@@ -84,28 +84,40 @@ func (parse *parse) run() {
 		line := reader.line()
 		switch {
 		case line.IsEmpty():
+			parse.closeParagraph()
+
 		case line.StartsWith(">"):
 			parse.quote()
+
 		case line.StartsWith("***") ||
 			line.StartsWith("---") ||
 			line.StartsWith("___"):
 			parse.separator()
+
 		case line.StartsWith("*"):
 			parse.list()
+
 		case line.StartsWith("-") || line.StartsWith("+"):
 			parse.list()
+
 		case line.StartsWithNumbering():
 			parse.numlist()
+
 		case line.StartsTitle():
 			parse.section()
+
 		case line.StartsWith("    ") || line.StartsWith("\t"):
 			parse.code()
+
 		case line.StartsWith("```"):
 			parse.fenced()
+
 		case line.StartsWith("{"):
 			parse.modifier()
+
 		case line.StartsWith("<{{"):
 			parse.include()
+
 		default:
 			parse.line()
 		}
@@ -187,11 +199,21 @@ func (parse *parse) line() {
 	if len(*seq) == 0 {
 		seq.Append(line)
 	} else {
-		if para, ok := (*seq)[len(*seq)-1].(*Paragraph); ok {
+		if para, ok := (*seq)[len(*seq)-1].(*Paragraph); ok && !para.closed {
 			para.AppendLine(line)
 		} else {
 			seq.Append(line)
 		}
+	}
+}
+
+func (parse *parse) closeParagraph() {
+	seq := parse.currentSequence(lastlevel)
+	if len(*seq) == 0 {
+		return
+	}
+	if para, ok := (*seq)[len(*seq)-1].(*Paragraph); ok {
+		para.Close()
 	}
 }
 
