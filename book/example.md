@@ -1,16 +1,16 @@
-Lorem ipsum dolor *sit amet*, consectetur adipisicing elit.
+Lorem **ipsum _dolor *sit amet*, cons_ectetur** adipisicing elit.
 Omnis quidem mollitia inv*entore*. Harum temporibus voluptates
 eum adipisci, perferendis *molestias* dignissimos, porro *repellat,*
 voluptas quo quas quidem facere. *Deserunt *voluptatum, odio.
 
 # H1 tag
 
-Lorem ipsum dolor *sit amet*, consectetur adipisicing elit.
+Lorem ipsum dolor *sit \*amet*, consectetur adipisicing elit.
 Omnis quidem mollitia inv*entore*. Harum temporibus voluptates
 eum adipisci, perferendis *molestias* dignissimos, porro *repellat,*
 voluptas quo quas quidem facere. *Deserunt *voluptatum, odio.
 
-   # H1 tag
+   # H1 **tag**
 
 Lorem ipsum dolor sit amet, consectetur adipisicing elit.
 Obcaecati, libero aliquam facilis ipsum molestiae quas minus.
@@ -18,7 +18,7 @@ Obcaecati, libero aliquam facilis ipsum molestiae quas minus.
 Voluptatibus tempore recusandae consectetur vitae, rerum ab
 ex inventore sed ut porro illo velit!
 
-## H2 tag
+## H2 tag \**\**\*
 
 Lorem ipsum dolor sit amet, consectetur adipisicing elit.
 Ea fugiat qui pariatur inventore at modi, esse eveniet, veritatis

@@ -32,6 +32,10 @@ func (parse *parse) check(err error) {
 type state struct {
 	sequence Sequence
 	errors   []error
+
+	partial struct {
+		paragraph []string
+	}
 }
 
 func ParseFile(filename string) (Sequence, []error) {
@@ -79,65 +83,67 @@ func (parse *parse) currentSequence(level int) *Sequence {
 }
 
 func (parse *parse) run() {
+	defer parse.flushParagraph()
+
 	reader := parse.reader
 	for reader.nextLine() {
 		line := reader.line()
 		switch {
 		case line.IsEmpty():
-			parse.closeParagraph()
-
+			parse.flushParagraph()
 		case line.StartsWith(">"):
 			parse.quote()
-
-		case line.StartsWith("***") ||
-			line.StartsWith("---") ||
-			line.StartsWith("___"):
+		case line.StartsWith("***") || line.StartsWith("---") || line.StartsWith("___"):
 			parse.separator()
-
 		case line.StartsWith("*"):
 			parse.list()
-
 		case line.StartsWith("-") || line.StartsWith("+"):
 			parse.list()
-
 		case line.StartsWithNumbering():
 			parse.numlist()
-
 		case line.StartsTitle():
 			parse.section()
-
 		case line.StartsWith("    ") || line.StartsWith("\t"):
 			parse.code()
-
 		case line.StartsWith("```"):
 			parse.fenced()
-
 		case line.StartsWith("{"):
 			parse.modifier()
-
 		case line.StartsWith("<{{"):
 			parse.include()
-
 		default:
 			parse.line()
 		}
 	}
 }
 
-func (parse *parse) quote() {
+// flushes pending paragraph
+func (parse *parse) flushParagraph() {
+	if len(parse.partial.paragraph) == 0 {
+		return
+	}
 
+	para := tokenizeParagraph(parse.partial.paragraph)
+	seq := parse.currentSequence(lastlevel)
+	seq.Append(para)
+
+	parse.partial.paragraph = nil
+}
+
+func (parse *parse) quote() {
+	parse.flushParagraph()
 }
 
 func (parse *parse) separator() {
-
+	parse.flushParagraph()
 }
 
 func (parse *parse) list() {
-
+	parse.flushParagraph()
 }
 
 func (parse *parse) numlist() {
-
+	parse.flushParagraph()
 }
 
 func (parse *parse) section() {
@@ -167,61 +173,38 @@ func (parse *parse) section() {
 
 	section.Title = *parse.inline()
 
+	parse.flushParagraph()
 	seq := parse.currentSequence(section.Level)
 	seq.Append(section)
 }
 
 func (parse *parse) code() {
-
+	parse.flushParagraph()
 }
 
 func (parse *parse) fenced() {
-
+	parse.flushParagraph()
 }
 
 func (parse *parse) modifier() {
-
+	parse.flushParagraph()
 }
 
 func (parse *parse) include() {
-
+	parse.flushParagraph()
 }
 
 func (parse *parse) line() {
 	reader := parse.reader
 
 	reader.ignore(' ')
-	reader.ignoreTrailing(' ')
-
-	line := parse.inline()
-
-	seq := parse.currentSequence(lastlevel)
-	if len(*seq) == 0 {
-		seq.Append(line)
-	} else {
-		if para, ok := (*seq)[len(*seq)-1].(*Paragraph); ok && !para.closed {
-			para.AppendLine(line)
-		} else {
-			seq.Append(line)
-		}
-	}
-}
-
-func (parse *parse) closeParagraph() {
-	seq := parse.currentSequence(lastlevel)
-	if len(*seq) == 0 {
-		return
-	}
-	if para, ok := (*seq)[len(*seq)-1].(*Paragraph); ok {
-		para.Close()
-	}
+	parse.partial.paragraph =
+		append(parse.partial.paragraph, reader.rest())
 }
 
 func (parse *parse) inline() *Paragraph {
 	reader := parse.reader
-	items := &Paragraph{}
-	items.Append(Text(reader.rest()))
-	return items
+	return tokenizeParagraph([]string{reader.rest()})
 }
 
 func order(xs ...int) bool {

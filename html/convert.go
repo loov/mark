@@ -8,16 +8,20 @@ import (
 	"github.com/loov/mark"
 )
 
-func ConvertInline(inline mark.Inline) string {
+func ConvertInline(inline mark.Inline) (r string) {
 	switch el := inline.(type) {
 	case mark.Text:
 		return html.EscapeString(string(el))
 	case mark.Emphasis:
-		x := html.EscapeString(string(el))
-		return "<em>" + x + "</em>"
+		for _, x := range el {
+			r += ConvertInline(x)
+		}
+		return "<em>" + r + "</em>"
 	case mark.Bold:
-		x := html.EscapeString(string(el))
-		return "<b>" + x + "</b>"
+		for _, x := range el {
+			r += ConvertInline(x)
+		}
+		return "<b>" + r + "</b>"
 	case mark.CodeSpan:
 		x := html.EscapeString(string(el))
 		return "<code>" + x + "</code>"

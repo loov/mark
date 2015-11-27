@@ -1,7 +1,5 @@
 package mark
 
-import "reflect"
-
 type Inline interface {
 	TagInline()
 }
@@ -16,10 +14,10 @@ func (LineBreak) TagInline() {}
 type Text string
 
 // Emphasis is text that should appear emphasised `<em>`
-type Emphasis string
+type Emphasis []Inline
 
 // Bold is text that should appear bold `<b>`
-type Bold string
+type Bold []Inline
 
 // CodeSpan is text that should appear monospaced `<code>`
 type CodeSpan string
@@ -52,18 +50,4 @@ func (InlineModifier) TagInline() {}
 type InlineModifier struct {
 	Class  string
 	Inline Inline
-}
-
-func Join(a, b Inline) (Inline, bool) {
-	av, bv := reflect.ValueOf(a), reflect.ValueOf(b)
-	if av.Type() != bv.Type() {
-		return nil, false
-	}
-	if av.Kind() != reflect.String {
-		return nil, false
-	}
-
-	x := av.String() + bv.String()
-	xv := reflect.ValueOf(x).Convert(av.Type())
-	return xv.Interface().(Inline), true
 }
