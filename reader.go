@@ -81,27 +81,30 @@ func (rd *reader) expect(r rune) bool {
 	return rd.expectFn(func(x rune) bool { return x == r })
 }
 
-func (rd *reader) ignoreFn(valid func(r rune) bool) {
+func (rd *reader) ignoreFn(valid func(r rune) bool) (count int) {
 	for {
 		r, s := utf8.DecodeRuneInString(rd.rest())
 		if s <= 0 || !valid(r) {
 			return
 		}
 		rd.head.at += s
+		count++
 	}
 }
 
-func (rd *reader) ignore(r rune) {
-	rd.ignoreFn(func(x rune) bool { return x == r })
+func (rd *reader) ignore(r rune) int {
+	return rd.ignoreFn(func(x rune) bool { return x == r })
 }
 
-func (rd *reader) ignoreTrailing(r rune) {
+func (rd *reader) ignoreTrailing(r rune) (count int) {
 	if utf8.RuneLen(r) > 1 {
 		panic("unimplemented for trailing large runes")
 	}
 	for rd.head.at < rd.head.stop && rune(rd.content[rd.head.stop-1]) == r {
 		rd.head.stop--
+		count++
 	}
+	return
 }
 
 func (rd *reader) ignoreSpaceTrailing(r rune) {

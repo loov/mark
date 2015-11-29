@@ -54,7 +54,7 @@ func (Separator) TagBlock() {}
 // Code is a block of code `<pre>`
 type Code struct {
 	Language string
-	Content  string
+	Lines    []string
 }
 
 // List is a list of different Sequence Blocks `<ul>`, `<ol>`

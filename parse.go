@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 )
 
 type parse struct {
@@ -183,7 +184,30 @@ func (parse *parse) code() {
 }
 
 func (parse *parse) fenced() {
+	reader := parse.reader
+
+	reader.ignore(' ')
+
+	fencesize := reader.ignore('`')
+	fence := strings.Repeat("`", fencesize)
+
+	reader.ignore(' ')
+	reader.ignoreTrailing(' ')
+
+	code := &Code{}
+	code.Language = reader.rest()
+
+	for reader.nextLine() {
+		line := reader.line()
+		if line.StartsWith(fence) {
+			break
+		}
+		code.Lines = append(code.Lines, string(line))
+	}
+
 	parse.flushParagraph()
+	seq := parse.currentSequence(lastlevel)
+	seq.Append(code)
 }
 
 func (parse *parse) modifier() {

@@ -32,6 +32,12 @@ Est ullam nemo nobis porro consectetur a dolores iusto sed eaque
 laudantium facere, ab voluptas consequatur, quos dolore praesentium
 commodi repudiandae mollitia!
 
+``` go
+func main(){
+	fmt.Println("Testing")
+}
+```
+
 ### H3 tag #
 
 Lorem ipsum dolor sit amet, consectetur adipisicing elit.

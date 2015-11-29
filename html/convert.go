@@ -3,7 +3,9 @@ package html
 import (
 	"fmt"
 	"html"
+	"html/template"
 	"strconv"
+	"strings"
 
 	"github.com/loov/mark"
 )
@@ -39,6 +41,17 @@ func ConvertBlock(block mark.Block) (r string) {
 			r += ConvertBlock(item)
 		}
 		return r
+	case *mark.Code:
+		starttag := "<pre><code>"
+		if el.Language != "" {
+			starttag = "<pre><code class=\"language-" +
+				template.JSEscapeString(el.Language) +
+				"\">"
+		}
+
+		return starttag +
+			html.EscapeString(strings.Join(el.Lines, "\n")) +
+			"</code></pre>"
 	case *mark.Paragraph:
 		for _, item := range el.Items {
 			r += ConvertInline(item)
