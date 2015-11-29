@@ -170,7 +170,21 @@ func (parent *parse) quote() {
 }
 
 func (parse *parse) separator() {
+	reader := parse.reader
 	parse.flushParagraph()
+
+	delim := reader.peekRune()
+	reader.ignore(delim)
+	reader.ignore(' ')
+
+	reader.ignoreTrailing(delim)
+	reader.ignoreTrailing(' ')
+
+	separator := &Separator{}
+	separator.Title = *parse.inline()
+
+	seq := parse.currentSequence(lastlevel)
+	seq.Append(separator)
 }
 
 func (parse *parse) list() {

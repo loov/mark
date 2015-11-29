@@ -63,6 +63,14 @@ func ConvertBlock(block mark.Block) (r string) {
 			"</code></pre>"
 	case *mark.Paragraph:
 		return "<p>" + ConvertParagraph(el) + "</p>"
+	case *mark.Separator:
+		if el.Title.IsEmpty() {
+			return "<hr>"
+		}
+		return "<div class=\"separator\">" +
+			ConvertParagraph(&el.Title) +
+			"</div>"
+
 	case *mark.Section:
 		ht := "h" + strconv.Itoa(el.Level)
 		return "<section>" +

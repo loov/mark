@@ -173,6 +173,12 @@ func (rd *reader) line() line {
 	return line(rd.content[rd.head.start+len(rd.prefix) : rd.head.stop])
 }
 
+// returns first rune in the unparsed string
+func (rd *reader) peekRune() rune {
+	r, _ := utf8.DecodeRuneInString(rd.rest())
+	return r
+}
+
 // returns unparsed part of current line, excluding line-feeds
 func (rd *reader) rest() string {
 	return string(rd.content[rd.head.at:rd.head.stop])

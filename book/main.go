@@ -28,6 +28,7 @@ func main() {
 			code { background: #000; color: #fff; }
 			pre > code { background: inherit; color: inherit; }
 			pre  { background: #000; color: #fff; padding: 0.5em; }
+			.separator { text-align: center; background: #eee; }
 		</style>
 	`+result), 0755)
 
