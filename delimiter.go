@@ -53,24 +53,18 @@ func (p *partial) pushrune(r rune) {
 	}
 }
 
-func delimtype(t token, elems []Inline) Inline {
-	if t.count == 1 {
-		return Emphasis(elems)
-	} else if t.count == 2 {
-		return Bold(elems)
-	}
-	panic("unhandled")
-}
+func findpair(tokens []token, mincount int) (s, e int) {
+	var first [96]int
+	first['*'] = -1
+	first['_'] = -1
 
-func findpair(tokens []token, delim rune, mincount int) (s, e int) {
-	s, e = -1, -1
 	for i, t := range tokens {
-		if t.delim == delim && t.count >= mincount {
-			if s < 0 {
-				s = i
-			} else if e < 0 {
-				e = i
-				return
+		if t.count >= mincount {
+			if t.delim == '*' || t.delim == '_' {
+				if first[t.delim] >= 0 {
+					return first[t.delim], i
+				}
+				first[t.delim] = i
 			}
 		}
 	}
@@ -94,10 +88,7 @@ func merge(tokens []token, count int) []Inline {
 		return elems
 	}
 
-	s, e := findpair(tokens, '*', count)
-	if s < 0 || e < 0 {
-		s, e = findpair(tokens, '_', count)
-	}
+	s, e := findpair(tokens, count)
 	if s < 0 || e < 0 {
 		return merge(tokens, count-1)
 	}
