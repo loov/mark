@@ -25,19 +25,24 @@ func (t *token) isempty() bool {
 	return t.text == "" && t.count == 0 && t.elem == nil
 }
 
+func (t *token) String() string {
+	if t.delim != 0 {
+		return strings.Repeat(string(t.delim), t.count)
+	}
+	return t.text
+}
+
 func (t *token) Inline() Inline {
 	if t.elem != nil {
 		return t.elem
 	}
-	if t.delim != 0 {
-		return Text(strings.Repeat(string(t.delim), t.count))
-	}
-	return Text(t.text)
+	return Text(t.String())
 }
 
 func (p *partial) pushdelim(r rune) {
 	n := len(p.tokens) - 1
-	if n >= 0 && p.tokens[n].delim == r {
+	canadd := n >= 0 && p.tokens[n].elem == nil
+	if canadd && p.tokens[n].delim == r {
 		p.tokens[n].count++
 	} else {
 		p.tokens = append(p.tokens, token{delim: r, count: 1})
@@ -46,7 +51,8 @@ func (p *partial) pushdelim(r rune) {
 
 func (p *partial) pushrune(r rune) {
 	n := len(p.tokens) - 1
-	if n >= 0 && p.tokens[n].delim == 0 {
+	canadd := n >= 0 && p.tokens[n].elem == nil
+	if canadd && p.tokens[n].delim == 0 {
 		p.tokens[n].text += string(r)
 	} else {
 		p.tokens = append(p.tokens, token{text: string(r)})
@@ -69,6 +75,13 @@ func findpair(tokens []token, mincount int) (s, e int) {
 		}
 	}
 	return -1, -1
+}
+
+func asraw(tokens []token) (text string) {
+	for _, t := range tokens {
+		text += t.String()
+	}
+	return text
 }
 
 func clone(tokens []token) []token {
@@ -117,12 +130,12 @@ func merge(tokens []token, count int) []Inline {
 }
 
 func isdelim(r rune) bool {
-	return r == '*' || r == '_'
+	return r == '*' || r == '_' || r == '`'
 }
 
 func tokenizeParagraph(lines []string) *Paragraph {
 	p := partial{}
-	for _, line := range lines {
+	for i, line := range lines {
 		escapenext := false
 		for _, r := range line {
 			if escapenext {
@@ -141,7 +154,15 @@ func tokenizeParagraph(lines []string) *Paragraph {
 				p.pushrune(r)
 			}
 		}
+
+		if i+1 != len(lines) {
+			p.tokens = append(p.tokens, token{
+				elem: SoftBreak{},
+			})
+		}
 	}
+
+	// p.tokens = replaceCodeSpans(p.tokens)
 
 	c := 0
 	for _, t := range p.tokens {
@@ -149,6 +170,7 @@ func tokenizeParagraph(lines []string) *Paragraph {
 			c = t.count
 		}
 	}
+	inline := merge(p.tokens, c)
 
-	return &Paragraph{merge(p.tokens, c)}
+	return &Paragraph{inline}
 }

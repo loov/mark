@@ -27,11 +27,20 @@ func ConvertInline(inline mark.Inline) (r string) {
 	case mark.CodeSpan:
 		x := html.EscapeString(string(el))
 		return "<code>" + x + "</code>"
-	case mark.LineBreak:
+	case mark.SoftBreak:
+		return "\n"
+	case mark.HardBreak:
 		return "<br>"
 	default:
 		panic(fmt.Errorf("unimplemented: %#+v", inline))
 	}
+}
+
+func ConvertParagraph(el *mark.Paragraph) (r string) {
+	for _, item := range el.Items {
+		r += ConvertInline(item)
+	}
+	return r
 }
 
 func ConvertBlock(block mark.Block) (r string) {
@@ -53,14 +62,11 @@ func ConvertBlock(block mark.Block) (r string) {
 			html.EscapeString(strings.Join(el.Lines, "\n")) +
 			"</code></pre>"
 	case *mark.Paragraph:
-		for _, item := range el.Items {
-			r += ConvertInline(item)
-		}
-		return "<p>" + r + "</p>"
+		return "<p>" + ConvertParagraph(el) + "</p>"
 	case *mark.Section:
 		ht := "h" + strconv.Itoa(el.Level)
 		return "<section>" +
-			"<" + ht + ">" + ConvertBlock(&el.Title) + "</" + ht + ">" +
+			"<" + ht + ">" + ConvertParagraph(&el.Title) + "</" + ht + ">" +
 			ConvertBlock(&el.Content) +
 			"</section>"
 	default:

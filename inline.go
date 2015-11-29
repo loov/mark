@@ -8,7 +8,8 @@ func (Text) TagInline()      {}
 func (Emphasis) TagInline()  {}
 func (Bold) TagInline()      {}
 func (CodeSpan) TagInline()  {}
-func (LineBreak) TagInline() {}
+func (SoftBreak) TagInline() {}
+func (HardBreak) TagInline() {}
 
 // Text is plain-text
 type Text string
@@ -22,8 +23,11 @@ type Bold []Inline
 // CodeSpan is text that should appear monospaced `<code>`
 type CodeSpan string
 
-// LineBreak is a hard line break
-type LineBreak struct{}
+// SoftBreak is a soft line break
+type SoftBreak struct{}
+
+// HardBreak is a hard line break
+type HardBreak struct{}
 
 func (Callout) TagInline() {}
 func (Index) TagInline()   {}
