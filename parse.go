@@ -190,10 +190,12 @@ func (parse *parse) separator() {
 
 func (parse *parse) list() {
 	parse.flushParagraph()
+	panic("list not implemented")
 }
 
 func (parse *parse) numlist() {
 	parse.flushParagraph()
+	panic("numlist not implemented")
 }
 
 func (parse *parse) section() {
@@ -297,10 +299,12 @@ func (parse *parse) fenced() {
 
 func (parse *parse) modifier() {
 	parse.flushParagraph()
+	panic("modifier not implemented")
 }
 
 func (parse *parse) include() {
 	parse.flushParagraph()
+	panic("include not implemented")
 }
 
 func (parse *parse) line() {
