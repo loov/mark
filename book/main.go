@@ -12,7 +12,11 @@ import (
 )
 
 func main() {
+	// print a clearing block
+	fmt.Println("CLEAR")
 	fmt.Println(strings.Repeat("\n", 32))
+	fmt.Println(strings.Repeat("-", 32))
+
 	pretty.Printf("Parsing example.md\n\n")
 	sequence, errs := mark.ParseFile("example.md")
 	for _, err := range errs {

@@ -104,7 +104,7 @@ func (parse *parse) run() {
 			parse.numlist()
 		case line.StartsTitle():
 			parse.section()
-		case line.StartsWith("    ") || line.StartsWith("\t"):
+		case line.StartsWithStrict("    "):
 			parse.code()
 		case line.StartsWith("```"):
 			parse.fenced()
@@ -228,7 +228,37 @@ func (parse *parse) section() {
 }
 
 func (parse *parse) code() {
+	reader := parse.reader
 	parse.flushParagraph()
+
+	code := &Code{}
+
+	line := reader.line()
+	if !line.StartsWithStrict("    ") {
+		panic("sanity check")
+	}
+	code.Lines = append(code.Lines, string(line[4:]))
+
+	undo := false
+	for reader.nextLine() {
+		line := reader.line()
+		if line.StartsWithStrict("    ") {
+			code.Lines = append(code.Lines, string(line[4:]))
+			continue
+		}
+		if line.trim3() == "" {
+			code.Lines = append(code.Lines, "")
+			continue
+		}
+		undo = true
+		break
+	}
+	if undo {
+		reader.undoNextLine()
+	}
+
+	seq := parse.currentSequence(lastlevel)
+	seq.Append(code)
 }
 
 func (parse *parse) fenced() {

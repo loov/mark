@@ -24,6 +24,10 @@ func (rd *reader) nextLine() bool {
 	if !strings.HasPrefix(rd.content[rd.head.end:], rd.prefix) {
 		return false
 	}
+	if rd.head.end >= len(rd.content) {
+		return false
+	}
+
 	rd.head.line++
 
 	rd.head.start = rd.head.end
@@ -31,7 +35,9 @@ func (rd *reader) nextLine() bool {
 
 	off := strings.IndexAny(rd.content[rd.head.start:], "\r\n")
 	if off < 0 {
-		return false
+		rd.head.end = len(rd.content)
+		rd.head.stop = len(rd.content)
+		return true
 	}
 
 	rd.head.stop = rd.head.start + off
@@ -49,6 +55,15 @@ func (rd *reader) nextLine() bool {
 
 func (rd *reader) resetLine() {
 	rd.head.at = rd.head.start + len(rd.prefix)
+}
+
+// note: can be only done once
+func (rd *reader) undoNextLine() {
+	rd.head.line--
+	rd.head.start = rd.head.start
+	rd.head.at = rd.head.start
+	rd.head.stop = rd.head.start
+	rd.head.end = rd.head.start
 }
 
 // ignores 0-3 spaces
@@ -140,8 +155,12 @@ func (line line) trim3() string {
 }
 
 func (line line) IsEmpty() bool { return line.trim3() == "" }
+
 func (line line) StartsWith(prefix string) bool {
 	return strings.HasPrefix(line.trim3(), prefix)
+}
+func (line line) StartsWithStrict(prefix string) bool {
+	return strings.HasPrefix(string(line), prefix)
 }
 
 func (line line) StartsWithNumbering() bool {

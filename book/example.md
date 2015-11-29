@@ -59,3 +59,8 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit.
 Ex eligendi eos error autem sapiente animi enim dolor recusandae laborum,
 numquam temporibus ullam esse, ducimus laudantium et amet similique
 assumenda cumque.
+
+> Quoted indented code-block
+>    func main() {
+>    	println("Hello, block code")
+>    }
