@@ -135,6 +135,7 @@ func (parent *parse) quote() {
 	parent.flushParagraph()
 
 	//TODO: implement lazyness
+	//      one >, should denote single block
 	// http://spec.commonmark.org/0.22/#block-quotes
 
 	spacecount := parent.reader.ignore(' ')
