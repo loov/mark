@@ -7,22 +7,27 @@ import (
 )
 
 type reader struct {
+	prefix  string
 	content string
 	head    span
 }
 
 type span struct {
-	line  int
-	start int
-	at    int
-	stop  int
-	end   int
+	line  int // line number
+	start int // line-start without prefix
+	at    int // current parsing position
+	stop  int // first line ending delimiter
+	end   int // next line start
 }
 
 func (rd *reader) nextLine() bool {
+	if !strings.HasPrefix(rd.content[rd.head.end:], rd.prefix) {
+		return false
+	}
 	rd.head.line++
+
 	rd.head.start = rd.head.end
-	rd.head.at = rd.head.end
+	rd.head.at = rd.head.start + len(rd.prefix)
 
 	off := strings.IndexAny(rd.content[rd.head.start:], "\r\n")
 	if off < 0 {
@@ -37,12 +42,14 @@ func (rd *reader) nextLine() bool {
 		rd.content[rd.head.stop] != rd.content[rd.head.stop+1] {
 		rd.head.end++
 	}
-
 	rd.head.end++
+
 	return true
 }
 
-func (rd *reader) resetLine() { rd.head.at = rd.head.start }
+func (rd *reader) resetLine() {
+	rd.head.at = rd.head.start + len(rd.prefix)
+}
 
 // ignores 0-3 spaces
 func (rd *reader) ignore3() {
@@ -161,9 +168,9 @@ func (line line) StartsTitle() bool {
 	return false
 }
 
-// returns current line, excluding line-feeds
+// returns current line, excluding line-feeds and prefixes
 func (rd *reader) line() line {
-	return line(rd.content[rd.head.start:rd.head.stop])
+	return line(rd.content[rd.head.start+len(rd.prefix) : rd.head.stop])
 }
 
 // returns unparsed part of current line, excluding line-feeds

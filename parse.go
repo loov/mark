@@ -131,8 +131,42 @@ func (parse *parse) flushParagraph() {
 	parse.partial.paragraph = nil
 }
 
-func (parse *parse) quote() {
-	parse.flushParagraph()
+func (parent *parse) quote() {
+	parent.flushParagraph()
+
+	//TODO: implement lazyness
+	// http://spec.commonmark.org/0.22/#block-quotes
+
+	spacecount := parent.reader.ignore(' ')
+	arrowcount := parent.reader.ignore('>')
+	prefix := strings.Repeat(" ", spacecount) +
+		strings.Repeat(">", arrowcount)
+
+	sub := &parse{
+		dir:    parent.dir,
+		path:   parent.path,
+		state:  &state{},
+		reader: &reader{},
+	}
+	*sub.reader = *parent.reader
+
+	end := parent.reader.head.start
+	sub.reader.head = span{
+		line:  parent.reader.head.line - 1,
+		start: end, at: end, end: end, stop: end,
+	}
+	sub.reader.prefix += prefix
+
+	sub.run()
+	parent.reader.head = sub.reader.head
+
+	parent.errors = append(parent.errors, sub.errors...)
+	seq := parent.currentSequence(lastlevel)
+	seq.Append(&Quote{
+		Category: "",
+		Title:    Paragraph{},
+		Content:  sub.sequence,
+	})
 }
 
 func (parse *parse) separator() {

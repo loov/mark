@@ -69,6 +69,8 @@ func ConvertBlock(block mark.Block) (r string) {
 			"<" + ht + ">" + ConvertParagraph(&el.Title) + "</" + ht + ">" +
 			ConvertBlock(&el.Content) +
 			"</section>"
+	case *mark.Quote:
+		return "<blockquote>" + ConvertBlock(&el.Content) + "</blockquote>"
 	default:
 		panic(fmt.Errorf("unimplemented: %#+v", block))
 	}
