@@ -197,12 +197,18 @@ func (parse *parse) fenced() {
 	code := &Code{}
 	code.Language = reader.rest()
 
+	foundend := false
 	for reader.nextLine() {
 		line := reader.line()
 		if line.StartsWith(fence) {
+			foundend = true
 			break
 		}
 		code.Lines = append(code.Lines, string(line))
+	}
+
+	if !foundend {
+		parse.check(errors.New("Did not find ending code fence"))
 	}
 
 	parse.flushParagraph()
