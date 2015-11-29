@@ -26,6 +26,8 @@ func main() {
 		<style>
 			body { width: 500px; margin: 1em auto; }
 			code { background: #000; color: #fff; }
+			pre > code { background: inherit; color: inherit; }
+			pre  { background: #000; color: #fff; padding: 0.5em; }
 		</style>
 	`+result), 0755)
 
