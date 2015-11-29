@@ -27,7 +27,19 @@ func (t *token) isempty() bool {
 
 func (t *token) String() string {
 	if t.delim != 0 {
+		if t.count == 0 {
+			return ""
+		}
 		return strings.Repeat(string(t.delim), t.count)
+	}
+	if t.elem != nil {
+		if _, ok := t.elem.(SoftBreak); ok {
+			return "\n"
+		}
+		if _, ok := t.elem.(HardBreak); ok {
+			return "\n"
+		}
+		panic("invalid token to String conversion")
 	}
 	return t.text
 }
@@ -59,7 +71,7 @@ func (p *partial) pushrune(r rune) {
 	}
 }
 
-func findpair(tokens []token, mincount int) (s, e int) {
+func findpairmin(tokens []token, mincount int) (s, e int) {
 	var first [96]int
 	first['*'] = -1
 	first['_'] = -1
@@ -77,7 +89,22 @@ func findpair(tokens []token, mincount int) (s, e int) {
 	return -1, -1
 }
 
-func asraw(tokens []token) (text string) {
+func finddelimpair(tokens []token, delim rune) (s, e int) {
+	s, e = -1, -1
+	for i, t := range tokens {
+		if t.delim == delim {
+			if s < 0 {
+				s = i
+			} else if e < 0 {
+				e = i
+				return
+			}
+		}
+	}
+	return -1, -1
+}
+
+func rawtext(tokens []token) (text string) {
 	for _, t := range tokens {
 		text += t.String()
 	}
@@ -101,7 +128,7 @@ func merge(tokens []token, count int) []Inline {
 		return elems
 	}
 
-	s, e := findpair(tokens, count)
+	s, e := findpairmin(tokens, count)
 	if s < 0 || e < 0 {
 		return merge(tokens, count-1)
 	}
@@ -133,6 +160,30 @@ func isdelim(r rune) bool {
 	return r == '*' || r == '_' || r == '`'
 }
 
+func replaceCodeSpans(tokens []token) []token {
+	s, e := finddelimpair(tokens, '`')
+	if s < 0 || e < 0 {
+		return tokens
+	}
+
+	tokens[s].count -= 1
+	if tokens[s].count == 0 {
+		tokens[s].delim = 0
+	}
+	tokens[e].count -= 1
+	if tokens[e].count == 0 {
+		tokens[e].delim = 0
+	}
+
+	text := rawtext(tokens[s:e])
+	tail := replaceCodeSpans(tokens[e:])
+
+	result := tokens[:s]
+	result = append(result, token{elem: CodeSpan(text)})
+	result = append(result, tail...)
+	return result
+}
+
 func tokenizeParagraph(lines []string) *Paragraph {
 	p := partial{}
 	for i, line := range lines {
@@ -162,7 +213,7 @@ func tokenizeParagraph(lines []string) *Paragraph {
 		}
 	}
 
-	// p.tokens = replaceCodeSpans(p.tokens)
+	p.tokens = replaceCodeSpans(p.tokens)
 
 	c := 0
 	for _, t := range p.tokens {

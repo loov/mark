@@ -25,6 +25,7 @@ func main() {
 		<meta http-equiv="refresh" content="1">
 		<style>
 			body { width: 500px; margin: 1em auto; }
+			code { background: #000; color: #fff; }
 		</style>
 	`+result), 0755)
 
