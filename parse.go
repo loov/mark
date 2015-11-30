@@ -135,13 +135,12 @@ func (parent *parse) quote() {
 	parent.flushParagraph()
 
 	//TODO: implement lazyness
-	//      one >, should denote single block
 	// http://spec.commonmark.org/0.22/#block-quotes
 
-	spacecount := parent.reader.ignore(' ')
-	arrowcount := parent.reader.ignore('>')
-	prefix := strings.Repeat(" ", spacecount) +
-		strings.Repeat(">", arrowcount)
+	parent.reader.ignore(' ')
+	if parent.reader.ignoreN('>', 1) != 1 {
+		panic("sanity check: " + parent.reader.rest())
+	}
 
 	sub := &parse{
 		dir:    parent.dir,
@@ -151,12 +150,8 @@ func (parent *parse) quote() {
 	}
 	*sub.reader = *parent.reader
 
-	end := parent.reader.head.start
-	sub.reader.head = span{
-		line:  parent.reader.head.line - 1,
-		start: end, at: end, end: end, stop: end,
-	}
-	sub.reader.prefix += prefix
+	sub.reader.setNextLineStart(parent.reader.head.start)
+	sub.reader.prefix = append(sub.reader.prefix, ">")
 
 	sub.run()
 	parent.reader.head = sub.reader.head
@@ -202,8 +197,8 @@ func (parse *parse) section() {
 	reader := parse.reader
 	section := &Section{}
 
-	reader.ignore3()
-	section.Level = reader.count('#')
+	reader.ignoreN(' ', 3)
+	section.Level = reader.ignore('#')
 	if !order(1, section.Level, 6) {
 		parse.check(errors.New("Expected heading, but contained too many #"))
 		reader.resetLine()
