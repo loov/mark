@@ -116,7 +116,7 @@ func (rd *reader) ignore(expect rune) (count int) {
 	return rd.ignoreN(expect, -1)
 }
 
-func (rd *reader) expect(r rune) bool { return rd.ignore(r) == 1 }
+func (rd *reader) expect(r rune) bool { return rd.ignoreN(r, 1) == 1 }
 
 func (rd *reader) ignoreTrailing(r rune) (count int) {
 	if utf8.RuneLen(r) > 1 {

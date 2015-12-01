@@ -138,7 +138,7 @@ func (parent *parse) quote() {
 	// http://spec.commonmark.org/0.22/#block-quotes
 
 	parent.reader.ignore(' ')
-	if parent.reader.ignoreN('>', 1) != 1 {
+	if !parent.reader.expect('>') {
 		panic("sanity check: " + parent.reader.rest())
 	}
 
