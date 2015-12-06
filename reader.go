@@ -13,7 +13,7 @@ type reader struct {
 }
 
 type prefix struct {
-	symbol byte
+	symbol rune
 	strict bool
 }
 
@@ -21,7 +21,7 @@ func (rd *reader) skipprefix(p prefix) bool {
 	if !p.strict {
 		rd.ignoreN(' ', 3)
 	}
-	if !rd.expect(rune(p.symbol)) {
+	if !rd.expect(p.symbol) {
 		return false
 	}
 	if !p.strict {

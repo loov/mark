@@ -33,6 +33,11 @@ func main() {
 			pre > code { background: inherit; color: inherit; }
 			pre  { background: #000; color: #fff; padding: 0.5em; }
 			.separator { text-align: center; background: #eee; }
+
+			p { margin: 0.5em 0; }
+			ul {
+				border: 1px solid #ccc;
+			}
 		</style>
 	`+result), 0755)
 

@@ -71,6 +71,21 @@ func ConvertBlock(block mark.Block) (r string) {
 			ConvertParagraph(&el.Title) +
 			"</div>"
 
+	case *mark.List:
+		for _, seq := range el.Content {
+			if len(seq) == 0 {
+				r += "<li></li>"
+				continue
+			}
+
+			if p, ok := seq[0].(*mark.Paragraph); ok {
+				r += "<li>" + ConvertParagraph(p) + "</li>"
+			} else {
+				r += "<li>" + ConvertBlock(&seq) + "</li>"
+			}
+		}
+		return "<ul>" + r + "</ul>"
+
 	case *mark.Section:
 		ht := "h" + strconv.Itoa(el.Level)
 		return "<section>" +

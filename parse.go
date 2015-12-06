@@ -96,9 +96,7 @@ func (parse *parse) run() {
 			parse.quote()
 		case line.StartsWith("***") || line.StartsWith("---") || line.StartsWith("___"):
 			parse.separator()
-		case line.StartsWith("*"):
-			parse.list()
-		case line.StartsWith("-") || line.StartsWith("+"):
+		case line.StartsWith("*") || line.StartsWith("-") || line.StartsWith("+"):
 			parse.list()
 		case line.StartsWithNumbering():
 			parse.numlist()
@@ -129,6 +127,24 @@ func (parse *parse) flushParagraph() {
 	seq.Append(para)
 
 	parse.partial.paragraph = nil
+}
+
+func (parse *parse) separator() {
+	reader := parse.reader
+	parse.flushParagraph()
+
+	delim := reader.peekRune()
+	reader.ignore(delim)
+	reader.ignore(' ')
+
+	reader.ignoreTrailing(delim)
+	reader.ignoreTrailing(' ')
+
+	separator := &Separator{}
+	separator.Title = *parse.inline()
+
+	seq := parse.currentSequence(lastlevel)
+	seq.Append(separator)
 }
 
 func (parent *parse) quote() {
@@ -167,27 +183,47 @@ func (parent *parse) quote() {
 	})
 }
 
-func (parse *parse) separator() {
-	reader := parse.reader
-	parse.flushParagraph()
+func (parent *parse) list() {
+	parent.flushParagraph()
 
-	delim := reader.peekRune()
-	reader.ignore(delim)
-	reader.ignore(' ')
+	parent.reader.ignore(' ')
+	delim := parent.reader.peekRune()
+	if !(delim == '-' || delim == '+' || delim == '*') {
+		panic("sanity check: " + parent.reader.rest())
+	}
 
-	reader.ignoreTrailing(delim)
-	reader.ignoreTrailing(' ')
+	parent.reader.ignore(delim)
+	parent.reader.ignore(' ')
 
-	separator := &Separator{}
-	separator.Title = *parse.inline()
+	sub := &parse{
+		dir:    parent.dir,
+		path:   parent.path,
+		state:  &state{},
+		reader: &reader{},
+	}
+	*sub.reader = *parent.reader
 
-	seq := parse.currentSequence(lastlevel)
-	seq.Append(separator)
-}
+	sub.reader.setNextLineStart(parent.reader.head.start)
+	sub.reader.prefixes = append(sub.reader.prefixes, prefix{
+		symbol: delim,
+	})
 
-func (parse *parse) list() {
-	parse.flushParagraph()
-	panic("list not implemented")
+	sub.run()
+	parent.reader.head = sub.reader.head
+
+	parent.errors = append(parent.errors, sub.errors...)
+
+	list := &List{
+		Numbered: false,
+		Content:  nil,
+	}
+
+	for _, item := range sub.sequence {
+		list.Content = append(list.Content, Sequence{item})
+	}
+
+	seq := parent.currentSequence(lastlevel)
+	seq.Append(list)
 }
 
 func (parse *parse) numlist() {
