@@ -21,7 +21,7 @@ func TestParagraph(t *testing.T) {
 		In:  "A\n B\n  C\n   D",
 		Exp: S(P(T("A"), SB, T("B"), SB, T("C"), SB, T("D"))),
 	}, { // multiple paragraphs
-		In:  "A\n\nB",
+		In:  "A\n\n\n\n\nB",
 		Exp: S(P(T("A")), P(T("B"))),
 	}}.Run(t)
 }
@@ -29,16 +29,16 @@ func TestParagraph(t *testing.T) {
 func TestSection(t *testing.T) {
 	TestCases{{
 		In:  "# Hello\nWorld",
-		Exp: S(Section(1, P(T("Hello")), P(T("World")))),
+		Exp: S(H(1, P(T("Hello")), P(T("World")))),
 	}, { // trim extra space
 		In:  "#     Hello    \nWorld",
-		Exp: S(Section(1, P(T("Hello")), P(T("World")))),
+		Exp: S(H(1, P(T("Hello")), P(T("World")))),
 	}, { // trim trailing #
 		In:  "#     Hello    #########   \nWorld",
-		Exp: S(Section(1, P(T("Hello")), P(T("World")))),
+		Exp: S(H(1, P(T("Hello")), P(T("World")))),
 	}, { // h3
 		In:  "### Hello\nWorld",
-		Exp: S(Section(3, P(T("Hello")), P(T("World")))),
+		Exp: S(H(3, P(T("Hello")), P(T("World")))),
 	}, { // require space
 		In:  "###Hello\nWorld",
 		Exp: S(P(T("###Hello"), SB, T("World"))),
@@ -49,10 +49,10 @@ func TestSection(t *testing.T) {
 	}, { // nested sections
 		In: "# A1\n## A2\n#### A4\n ## B2",
 		Exp: S(
-			Section(1, P(T("A1")),
-				Section(2, P(T("A2")),
-					Section(4, P(T("A4")))),
-				Section(2, P(T("B2"))),
+			H(1, P(T("A1")),
+				H(2, P(T("A2")),
+					H(4, P(T("A4")))),
+				H(2, P(T("B2"))),
 			)),
 	}}.Run(t)
 }
@@ -70,9 +70,9 @@ func TestQuote(t *testing.T) {
 	}, { // two blocks
 		In:  "> A\n\n>B",
 		Exp: S(Q(P(T("A"))), Q(P(T("B")))),
-	}, { // section in block
+	}, { // H in block
 		In:  "> # Hello\n> World",
-		Exp: S(Q(Section(1, P(T("Hello")), P(T("World"))))),
+		Exp: S(Q(H(1, P(T("Hello")), P(T("World"))))),
 	}, { // nested quote
 		In:  ">> A\n>  >B",
 		Exp: S(Q(Q(P(T("A"), SB, T("B"))))),
@@ -121,7 +121,7 @@ func TestIndentCode(t *testing.T) {
 }
 
 // Convenience functions
-func Section(level int, title *mark.Paragraph, content ...mark.Block) *mark.Section {
+func H(level int, title *mark.Paragraph, content ...mark.Block) *mark.Section {
 	return &mark.Section{
 		Level:   level,
 		Title:   *title,
