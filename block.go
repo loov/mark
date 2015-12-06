@@ -59,8 +59,8 @@ type Code struct {
 
 // List is a list of different Sequence Blocks `<ul>`, `<ol>`
 type List struct {
-	Numbered bool
-	Content  []Sequence
+	Ordered bool
+	Content []Sequence
 }
 
 // Image refers to an image `<img>`

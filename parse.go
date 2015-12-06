@@ -192,6 +192,10 @@ func (parent *parse) list() {
 		panic("sanity check: " + parent.reader.rest())
 	}
 
+	//TODO: fix
+	// Use sub-parser to parse a single list-item
+	// push list-item to the list at the end of current sequence
+
 	parent.reader.ignore(delim)
 	parent.reader.ignore(' ')
 
@@ -214,8 +218,8 @@ func (parent *parse) list() {
 	parent.errors = append(parent.errors, sub.errors...)
 
 	list := &List{
-		Numbered: false,
-		Content:  nil,
+		Ordered: false,
+		Content: nil,
 	}
 
 	for _, item := range sub.sequence {

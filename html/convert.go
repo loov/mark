@@ -84,6 +84,10 @@ func ConvertBlock(block mark.Block) (r string) {
 				r += "<li>" + ConvertBlock(&seq) + "</li>"
 			}
 		}
+
+		if el.Ordered {
+			return "<ol>" + r + "</ol>"
+		}
 		return "<ul>" + r + "</ul>"
 
 	case *mark.Section:

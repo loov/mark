@@ -70,9 +70,12 @@ func (rd *reader) nextLine() bool {
 	}
 
 	// if there's a \rd\n or \n\rd, the head-break takes two runes
-	if rd.head.stop+1 < len(rd.content) &&
-		rd.content[rd.head.stop] != rd.content[rd.head.stop+1] {
-		rd.head.end++
+	if rd.head.stop+1 < len(rd.content) {
+		next := rd.content[rd.head.stop+1]
+		if (next == '\r' || next == '\n') &&
+			rd.content[rd.head.stop] != next {
+			rd.head.end++
+		}
 	}
 	if rd.head.end < len(rd.content) {
 		rd.head.end++
