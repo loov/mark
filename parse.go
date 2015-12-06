@@ -104,7 +104,7 @@ func (parse *parse) run() {
 			parse.numlist()
 		case line.StartsTitle():
 			parse.section()
-		case line.StartsWithStrict("    "):
+		case line.StartsWith("    "):
 			parse.code()
 		case line.StartsWith("```"):
 			parse.fenced()
@@ -151,7 +151,9 @@ func (parent *parse) quote() {
 	*sub.reader = *parent.reader
 
 	sub.reader.setNextLineStart(parent.reader.head.start)
-	sub.reader.prefix = append(sub.reader.prefix, ">")
+	sub.reader.prefixes = append(sub.reader.prefixes, prefix{
+		symbol: '>',
+	})
 
 	sub.run()
 	parent.reader.head = sub.reader.head
@@ -232,7 +234,7 @@ func (parse *parse) code() {
 	code := &Code{}
 
 	line := reader.line()
-	if !line.StartsWithStrict("    ") {
+	if !line.StartsWith("    ") {
 		panic("sanity check")
 	}
 	code.Lines = append(code.Lines, string(line[4:]))
@@ -240,7 +242,7 @@ func (parse *parse) code() {
 	undo := false
 	for reader.nextLine() {
 		line := reader.line()
-		if line.StartsWithStrict("    ") {
+		if line.StartsWith("    ") {
 			code.Lines = append(code.Lines, string(line[4:]))
 			continue
 		}

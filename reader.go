@@ -1,16 +1,43 @@
 package mark
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 )
 
 type reader struct {
-	prefix  []string
-	content string
-	head    span
+	prefixes []prefix
+	content  string
+	head     span
+}
+
+type prefix struct {
+	symbol byte
+	strict bool
+}
+
+func (rd *reader) skipprefix(p prefix) bool {
+	if !p.strict {
+		rd.ignoreN(' ', 3)
+	}
+	if !rd.expect(rune(p.symbol)) {
+		return false
+	}
+	if !p.strict {
+		rd.ignore(' ')
+	}
+	return true
+}
+
+func (rd *reader) skipprefixes() bool {
+	for _, prefix := range rd.prefixes {
+		if !rd.skipprefix(prefix) {
+			return false
+		}
+		rd.head.begin = rd.head.at
+	}
+	return true
 }
 
 type span struct {
@@ -20,23 +47,6 @@ type span struct {
 	at    int // current parsing position
 	stop  int // first line ending delimiter
 	end   int // next line start
-}
-
-func (rd *reader) skipprefix() bool {
-	if len(rd.prefix) > 0 {
-		fmt.Println(rd.prefix)
-	}
-	for _, prefix := range rd.prefix {
-		if !rd.line().StartsWith(prefix) {
-			return false
-		}
-		rd.ignoreN(' ', 3)
-		rd.head.at += len(prefix)
-		rd.ignoreN(' ', 1)
-
-		rd.head.begin = rd.head.at
-	}
-	return true
 }
 
 func (rd *reader) nextLine() bool {
@@ -68,7 +78,7 @@ func (rd *reader) nextLine() bool {
 		rd.head.end++
 	}
 
-	if !rd.skipprefix() {
+	if !rd.skipprefixes() {
 		rd.head = previoushead
 		return false
 	}
@@ -157,10 +167,13 @@ func (line line) trim3() string {
 func (line line) IsEmpty() bool { return line.trim3() == "" }
 
 func (line line) StartsWith(prefix string) bool {
+	if len(prefix) == 0 {
+		return true
+	}
+	if prefix[0] == ' ' {
+		return strings.HasPrefix(string(line), prefix)
+	}
 	return strings.HasPrefix(line.trim3(), prefix)
-}
-func (line line) StartsWithStrict(prefix string) bool {
-	return strings.HasPrefix(string(line), prefix)
 }
 
 func (line line) StartsWithNumbering() bool {
