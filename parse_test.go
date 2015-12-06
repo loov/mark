@@ -98,6 +98,28 @@ func TestFence(t *testing.T) {
 	}}.Run(t)
 }
 
+func TestIndentCode(t *testing.T) {
+	TestCases{{ // basic
+		In:  "    CODE",
+		Exp: S(Code("", "CODE")),
+	}, { // preserve empty lines
+		In:  "    \n    CO\n    \n    DE\n    ",
+		Exp: S(Code("", "", "CO", "", "DE", "")),
+	}, { // different symbols
+		In:  "    !@#$%^&*()_+/*-+!@#$%^&*()_+/*-+",
+		Exp: S(Code("", "!@#$%^&*()_+/*-+!@#$%^&*()_+/*-+")),
+	}, { // preserve tabs/spaces
+		In:  "    \tX  ",
+		Exp: S(Code("", "\tX  ")),
+	}, { // lazy lines
+		In:  "    A\n\n\n    B",
+		Exp: S(Code("", "A", "", "", "B")),
+	}, { // paragraph ends
+		In:  "    A\nB",
+		Exp: S(Code("", "A"), P(T("B"))),
+	}}.Run(t)
+}
+
 // Convenience functions
 func Section(level int, title *mark.Paragraph, content ...mark.Block) *mark.Section {
 	return &mark.Section{
