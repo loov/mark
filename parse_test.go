@@ -13,46 +13,46 @@ import (
 func TestParagraph(t *testing.T) {
 	TestCases{{
 		In:  "ABC",
-		Exp: S(P(T("ABC"))),
+		Exp: Seq(Para(Text("ABC"))),
 	}, { // line-break
 		In:  "ABC\nDEF",
-		Exp: S(P(T("ABC"), SB, T("DEF"))),
+		Exp: Seq(Para(Text("ABC"), SB, Text("DEF"))),
 	}, { // non-strict 3 spaces in front of line
 		In:  "A\n B\n  C\n   D",
-		Exp: S(P(T("A"), SB, T("B"), SB, T("C"), SB, T("D"))),
+		Exp: Seq(Para(Text("A"), SB, Text("B"), SB, Text("C"), SB, Text("D"))),
 	}, { // multiple paragraphs
 		In:  "A\n\n\n\n\nB",
-		Exp: S(P(T("A")), P(T("B"))),
+		Exp: Seq(Para(Text("A")), Para(Text("B"))),
 	}}.Run(t)
 }
 
 func TestSection(t *testing.T) {
 	TestCases{{
 		In:  "# Hello\nWorld",
-		Exp: S(H(1, P(T("Hello")), P(T("World")))),
+		Exp: Seq(H(1, Para(Text("Hello")), Para(Text("World")))),
 	}, { // trim extra space
 		In:  "#     Hello    \nWorld",
-		Exp: S(H(1, P(T("Hello")), P(T("World")))),
+		Exp: Seq(H(1, Para(Text("Hello")), Para(Text("World")))),
 	}, { // trim trailing #
 		In:  "#     Hello    #########   \nWorld",
-		Exp: S(H(1, P(T("Hello")), P(T("World")))),
+		Exp: Seq(H(1, Para(Text("Hello")), Para(Text("World")))),
 	}, { // h3
 		In:  "### Hello\nWorld",
-		Exp: S(H(3, P(T("Hello")), P(T("World")))),
+		Exp: Seq(H(3, Para(Text("Hello")), Para(Text("World")))),
 	}, { // require space
 		In:  "###Hello\nWorld",
-		Exp: S(P(T("###Hello"), SB, T("World"))),
+		Exp: Seq(Para(Text("###Hello"), SB, Text("World"))),
 	}, { // too many ###
 		In:   "######## Hello",
-		Exp:  S(P(T("######## Hello"))),
+		Exp:  Seq(Para(Text("######## Hello"))),
 		Errs: []string{"main.md:1: Expected heading, but contained too many #"},
 	}, { // nested sections
 		In: "# A1\n## A2\n#### A4\n ## B2",
-		Exp: S(
-			H(1, P(T("A1")),
-				H(2, P(T("A2")),
-					H(4, P(T("A4")))),
-				H(2, P(T("B2"))),
+		Exp: Seq(
+			H(1, Para(Text("A1")),
+				H(2, Para(Text("A2")),
+					H(4, Para(Text("A4")))),
+				H(2, Para(Text("B2"))),
 			)),
 	}}.Run(t)
 }
@@ -60,63 +60,63 @@ func TestSection(t *testing.T) {
 func TestQuote(t *testing.T) {
 	TestCases{{ // basic
 		In:  "> A",
-		Exp: S(Q(P(T("A")))),
+		Exp: Seq(Quote(Para(Text("A")))),
 	}, { // multiple lines
 		In:  "> A\n> B",
-		Exp: S(Q(P(T("A"), SB, T("B")))),
+		Exp: Seq(Quote(Para(Text("A"), SB, Text("B")))),
 	}, { // lazy spacing
 		In:  "> A\n >B\n  >    C",
-		Exp: S(Q(P(T("A"), SB, T("B"), SB, T("C")))),
+		Exp: Seq(Quote(Para(Text("A"), SB, Text("B"), SB, Text("C")))),
 	}, { // two blocks
 		In:  "> A\n\n>B",
-		Exp: S(Q(P(T("A"))), Q(P(T("B")))),
+		Exp: Seq(Quote(Para(Text("A"))), Quote(Para(Text("B")))),
 	}, { // H in block
 		In:  "> # Hello\n> World",
-		Exp: S(Q(H(1, P(T("Hello")), P(T("World"))))),
+		Exp: Seq(Quote(H(1, Para(Text("Hello")), Para(Text("World"))))),
 	}, { // nested quote
 		In:  ">> A\n>  >B",
-		Exp: S(Q(Q(P(T("A"), SB, T("B"))))),
+		Exp: Seq(Quote(Quote(Para(Text("A"), SB, Text("B"))))),
 	}}.Run(t)
 }
 
 func TestFence(t *testing.T) {
 	TestCases{{ // basic
 		In:  "```\nCODE\n```",
-		Exp: S(Code("", "CODE")),
+		Exp: Seq(Code("", "CODE")),
 	}, { // language
 		In:  "``` md\nCODE\n```",
-		Exp: S(Code("md", "CODE")),
+		Exp: Seq(Code("md", "CODE")),
 	}, { // preserve empty lines
 		In:  "```md\n\nCO\n\nDE\n\n```",
-		Exp: S(Code("md", "", "CO", "", "DE", "")),
+		Exp: Seq(Code("md", "", "CO", "", "DE", "")),
 	}, { // different symbols
 		In:  "```md\n!@#$%^&*()_+/*-+!@#$%^&*()_+/*-+\n```",
-		Exp: S(Code("md", "!@#$%^&*()_+/*-+!@#$%^&*()_+/*-+")),
+		Exp: Seq(Code("md", "!@#$%^&*()_+/*-+!@#$%^&*()_+/*-+")),
 	}, { // preserve tabs/spaces
 		In:  "```md\n{\n\tX\n   \n    }    \n```",
-		Exp: S(Code("md", "{", "\tX", "   ", "    }    ")),
+		Exp: Seq(Code("md", "{", "\tX", "   ", "    }    ")),
 	}}.Run(t)
 }
 
 func TestIndentCode(t *testing.T) {
 	TestCases{{ // basic
 		In:  "    CODE",
-		Exp: S(Code("", "CODE")),
+		Exp: Seq(Code("", "CODE")),
 	}, { // preserve empty lines
 		In:  "    \n    CO\n    \n    DE\n    ",
-		Exp: S(Code("", "", "CO", "", "DE", "")),
+		Exp: Seq(Code("", "", "CO", "", "DE", "")),
 	}, { // different symbols
 		In:  "    !@#$%^&*()_+/*-+!@#$%^&*()_+/*-+",
-		Exp: S(Code("", "!@#$%^&*()_+/*-+!@#$%^&*()_+/*-+")),
+		Exp: Seq(Code("", "!@#$%^&*()_+/*-+!@#$%^&*()_+/*-+")),
 	}, { // preserve tabs/spaces
 		In:  "    \tX  ",
-		Exp: S(Code("", "\tX  ")),
+		Exp: Seq(Code("", "\tX  ")),
 	}, { // lazy lines
 		In:  "    A\n\n\n    B",
-		Exp: S(Code("", "A", "", "", "B")),
+		Exp: Seq(Code("", "A", "", "", "B")),
 	}, { // paragraph ends
 		In:  "    A\nB",
-		Exp: S(Code("", "A"), P(T("B"))),
+		Exp: Seq(Code("", "A"), Para(Text("B"))),
 	}}.Run(t)
 }
 
@@ -128,10 +128,10 @@ func H(level int, title *mark.Paragraph, content ...mark.Block) *mark.Section {
 		Content: mark.Sequence(content),
 	}
 }
-func S(blocks ...mark.Block) mark.Sequence   { return mark.Sequence(blocks) }
-func Q(blocks ...mark.Block) *mark.Quote     { return &mark.Quote{Content: blocks} }
-func P(elems ...mark.Inline) *mark.Paragraph { return &mark.Paragraph{Items: elems} }
-func T(s string) mark.Text                   { return mark.Text(s) }
+func Seq(blocks ...mark.Block) mark.Sequence    { return mark.Sequence(blocks) }
+func Quote(blocks ...mark.Block) *mark.Quote    { return &mark.Quote{Content: blocks} }
+func Para(elems ...mark.Inline) *mark.Paragraph { return &mark.Paragraph{Items: elems} }
+func Text(s string) mark.Text                   { return mark.Text(s) }
 
 var SB = mark.SoftBreak{}
 
