@@ -2,6 +2,21 @@ package mark
 
 import "strings"
 
+// Algorithm for `markup`
+//
+// 1.   resolve any code spans;
+// 2.   resolve any links, call `markup` starting from 3,
+//      find starting [ and ending ]( and final );
+// 3.   N := maximum number of markup tokens in line;
+// 4.0. for ; N > 0; N -- {
+// 4.1.    s, t := first markup sequence with at least length N;
+// 4.2.    e := next matching sequence with at least length N and token t;
+// 4.3.    recurse `markup` on s..e, where unused tokens are inside of the span;
+// 4.4.    if tokens weren't used when recursing, keep them outside of the span;
+// 4.5. }
+// 5.   convert all the items to their appropriate types,
+//      concatenating when possible.
+
 func trimsuffix(s string, b byte) string {
 	i := len(s)
 	for i > 0 && s[i-1] == b {
