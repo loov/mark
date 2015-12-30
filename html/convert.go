@@ -1,6 +1,7 @@
 package html
 
 import (
+	"bytes"
 	"fmt"
 	"html"
 	"html/template"
@@ -9,6 +10,17 @@ import (
 
 	"github.com/loov/mark"
 )
+
+var linkTemplate = template.Must(template.New("").Parse(`<a href="{{.Href}}">{{.Title}}</a>`))
+
+func exec(t *template.Template, data interface{}) string {
+	var buf bytes.Buffer
+	err := t.Execute(&buf, data)
+	if err != nil {
+		panic(err)
+	}
+	return buf.String()
+}
 
 func ConvertInline(inline mark.Inline) (r string) {
 	switch el := inline.(type) {
@@ -31,6 +43,11 @@ func ConvertInline(inline mark.Inline) (r string) {
 		return "\n"
 	case mark.HardBreak:
 		return "<br>"
+	case mark.Link:
+		return exec(linkTemplate, map[string]interface{}{
+			"Href":  el.Href,
+			"Title": template.HTML(ConvertParagraph(&el.Title)),
+		})
 	default:
 		panic(fmt.Errorf("unimplemented: %#+v", inline))
 	}

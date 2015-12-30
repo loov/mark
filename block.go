@@ -71,5 +71,5 @@ type Image struct {
 
 // Separator is a horizontal-rule with an optional title `<hr>`
 type Separator struct {
-	Title Paragraph
+	Title Paragraph //TODO: remove, use a section instead for titles
 }

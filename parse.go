@@ -94,9 +94,11 @@ func (parse *parse) run() {
 			parse.flushParagraph()
 		case line.StartsWith(">"):
 			parse.quote()
-		case line.StartsWith("***") || line.StartsWith("---") || line.StartsWith("___"):
+		case line.StartsWith("*** ") || line.StartsWith("--- ") || line.StartsWith("___ "):
+			// TODO: handle empty item
 			parse.separator()
-		case line.StartsWith("*") || line.StartsWith("-") || line.StartsWith("+"):
+		case line.StartsWith("* ") || line.StartsWith("- ") || line.StartsWith("+ "):
+			// TODO: handle empty item
 			parse.list()
 		case line.StartsWithNumbering():
 			parse.numlist()

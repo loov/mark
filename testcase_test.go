@@ -18,10 +18,23 @@ func H(level int, title *mark.Paragraph, content ...mark.Block) *mark.Section {
 		Content: mark.Sequence(content),
 	}
 }
-func Seq(blocks ...mark.Block) mark.Sequence    { return mark.Sequence(blocks) }
-func Quote(blocks ...mark.Block) *mark.Quote    { return &mark.Quote{Content: blocks} }
+func Seq(blocks ...mark.Block) mark.Sequence { return mark.Sequence(blocks) }
+func Ul(seqs ...mark.Sequence) *mark.List    { return &mark.List{Ordered: false, Content: seqs} }
+func Ol(seqs ...mark.Sequence) *mark.List    { return &mark.List{Ordered: true, Content: seqs} }
+func Quote(blocks ...mark.Block) *mark.Quote { return &mark.Quote{Content: blocks} }
+func Text(s string) mark.Text                { return mark.Text(s) }
+
 func Para(elems ...mark.Inline) *mark.Paragraph { return &mark.Paragraph{Items: elems} }
-func Text(s string) mark.Text                   { return mark.Text(s) }
+func Em(elems ...mark.Inline) mark.Emphasis     { return mark.Emphasis(elems) }
+func Bold(elems ...mark.Inline) mark.Bold       { return mark.Bold(elems) }
+
+func Link(href string, title ...mark.Inline) mark.Link {
+	t := Para(title...)
+	return mark.Link{
+		Title: *t,
+		Href:  href,
+	}
+}
 
 var SB = mark.SoftBreak{}
 
@@ -94,6 +107,10 @@ func (tc *TestCase) Run(br string, i int, t *testing.T) (ok bool) {
 		outs := strconv.Quote(html.Convert(out))
 		exps := strconv.Quote(html.Convert(tc.Exp))
 		t.Errorf("#%d%s invalid output:\ngot %v\nexp %v", i, br, outs, exps)
+		/* verbose
+		pretty.Println(out)
+		pretty.Println(tc.Exp)
+		/**/
 		ok = false
 	}
 	return
