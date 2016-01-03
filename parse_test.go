@@ -49,6 +49,22 @@ func TestSection(t *testing.T) {
 	}}.Run(t)
 }
 
+func TestSetext(t *testing.T) {
+	TestCases{{
+		In:  "Hello\n===\nWorld",
+		Exp: Seq(H(1, Para(Text("Hello")), Para(Text("World")))),
+	}, { // trim extra space
+		In:  "   Hello    \n   =\nWorld",
+		Exp: Seq(H(1, Para(Text("Hello")), Para(Text("World")))),
+	}, { // trim trailing space
+		In:  "   Hello    \n   =        \nWorld",
+		Exp: Seq(H(1, Para(Text("Hello")), Para(Text("World")))),
+	}, { // h2
+		In:  "Hello\n---\nWorld",
+		Exp: Seq(H(2, Para(Text("Hello")), Para(Text("World")))),
+	}}.Run(t)
+}
+
 func TestQuote(t *testing.T) {
 	TestCases{{ // basic
 		In:  "> A",

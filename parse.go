@@ -104,6 +104,8 @@ func (parse *parse) run() {
 			parse.numlist()
 		case line.StartsTitle():
 			parse.section()
+		case line.ContainsOnly('=') || line.ContainsOnly('-'):
+			parse.setext()
 		case line.StartsWith("    "):
 			parse.code()
 		case line.StartsWith("```"):
@@ -235,6 +237,34 @@ func (parent *parse) list() {
 func (parse *parse) numlist() {
 	parse.flushParagraph()
 	panic("numlist not implemented")
+}
+
+func (parse *parse) setext() {
+	if len(parse.partial.paragraph) != 1 {
+		parse.line()
+		return
+	}
+	reader := parse.reader
+	section := &Section{}
+
+	//TODO: check for lazy continuation
+
+	reader.ignoreN(' ', 3)
+	switch x := reader.peekRune(); x {
+	case '=':
+		section.Level = 1
+	case '-':
+		section.Level = 2
+	default:
+		panic("Invalid setext header symbol " + string(x))
+	}
+
+	parse.partial.paragraph[0] = strings.TrimSpace(parse.partial.paragraph[0])
+	section.Title = *tokenizeParagraph(parse.partial.paragraph)
+	parse.partial.paragraph = nil
+
+	seq := parse.currentSequence(section.Level)
+	seq.Append(section)
 }
 
 func (parse *parse) section() {

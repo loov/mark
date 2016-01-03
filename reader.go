@@ -203,6 +203,27 @@ func (line line) StartsTitle() bool {
 	return false
 }
 
+func (line line) ContainsOnly(r rune) bool {
+	foundspace := false
+	for i, x := range line.trim3() {
+		if x == ' ' {
+			if i == 0 {
+				return false
+			}
+			foundspace = true
+			continue
+		} else if foundspace {
+			// if we found a trailing-space and encounter a non-space
+			return false
+		}
+
+		if x != r {
+			return false
+		}
+	}
+	return true
+}
+
 // returns current line, excluding line-feeds and prefixes
 func (rd *reader) line() line {
 	return line(rd.content[rd.head.begin:rd.head.stop])
