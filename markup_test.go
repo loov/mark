@@ -52,6 +52,31 @@ func TestBoldEmphasis(t *testing.T) {
 	}}.Run(t)
 }
 
+func TestCodeSpan(t *testing.T) {
+	TestCases{{ // simple codespan
+		In:  "Start `Hello ` World",
+		Exp: Seq(Para(Text("Start "), CodeSpan("Hello "), Text(" World"))),
+	}, { // four codespan
+		In:  "Start ````Hello ```` World",
+		Exp: Seq(Para(Text("Start "), CodeSpan("Hello "), Text(" World"))),
+	}, { // mismatched quotes
+		In:  "Start ``Hello ``` World",
+		Exp: Seq(Para(Text("Start ``Hello ``` World"))),
+	}, { // nested
+		In:  "Start ````A```B````C```",
+		Exp: Seq(Para(Text("Start "), CodeSpan("A```B"), Text("C```"))),
+	}, { // nested reverse
+		In:  "Start ```C````A```B````",
+		Exp: Seq(Para(Text("Start ```C"), CodeSpan("A```B"))),
+	}, { // containing link
+		In:  "`[Link](Text)`",
+		Exp: Seq(Para(CodeSpan("[Link](Text)"))),
+	}, { // containing em and bold
+		In:  "`*a* **b** ***c*** __alpha__`",
+		Exp: Seq(Para(CodeSpan("*a* **b** ***c*** __alpha__"))),
+	}}.Run(t)
+}
+
 func TestLinks(t *testing.T) {
 	TestCases{{ // simple link
 		In:  "[title](http://example.com)",

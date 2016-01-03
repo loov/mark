@@ -2,8 +2,8 @@ package mark
 
 import "strings"
 
-// Algorithm for `markup`
-//
+// Algorithm for marking up
+// 0.   tokenize
 // 1.   resolve any code spans;
 // 2.   resolve any links, call `markup` starting from 3,
 //      find starting [ and ending ]( and final );
@@ -17,82 +17,96 @@ import "strings"
 // 5.   convert all the items to their appropriate types,
 //      concatenating when possible.
 
-func trimsuffix(s string, b byte) string {
-	i := len(s)
-	for i > 0 && s[i-1] == b {
-		i--
-	}
-	return s[:i]
-}
-
-type partial struct {
-	tokens []token
-}
-
 type token struct {
 	delim rune
-	count int
+	level int
 	text  string
 	elem  Inline
 }
 
-func (t *token) isempty() bool {
-	return t.text == "" && t.count == 0 && t.elem == nil
+func markupDelimiter(r rune) bool {
+	switch r {
+	case '`', '[', ']', '(', ')', '*', '_':
+		return true
+	}
+	return false
 }
 
-func (t *token) String() string {
-	if t.delim != 0 {
-		if t.count == 0 {
-			return ""
+func delimhistogram(tokens []token, isdelim func(r rune) bool) (hist []int) {
+	for _, t := range tokens {
+		if isdelim(t.delim) {
+			if t.level+1 >= len(hist) {
+				hist = append(hist, make([]int, t.level-len(hist)+1)...)
+			}
+			hist[t.level]++
 		}
-		return strings.Repeat(string(t.delim), t.count)
 	}
-	if t.elem != nil {
-		if _, ok := t.elem.(SoftBreak); ok {
-			return "\n"
+	return
+}
+
+func replaceCodeSpans(tokens []token) []token {
+	hist := delimhistogram(tokens, func(r rune) bool { return r == '`' })
+	for level := len(hist) - 1; level >= 1; level-- {
+		count := hist[level]
+		var s, e int
+		s = -1
+		for ; count >= 2; count -= 2 {
+			s, e = findpair(s+1, tokens, level, '`', '`')
+			if s < 0 || e < 0 {
+				break
+			}
+
+			text := ""
+			for _, t := range tokens[s+1 : e] {
+				text += t.String()
+			}
+			tokens[s] = token{elem: CodeSpan(text)}
+			tokens = append(tokens[:s+1], tokens[e+1:]...)
 		}
-		if _, ok := t.elem.(HardBreak); ok {
-			return "\n"
+	}
+
+	return tokens
+}
+
+func findpair(start int, tokens []token, level int, begin, end rune) (s, e int) {
+	s, e = -1, -1
+	if start > len(tokens) {
+		return
+	}
+
+	// find begin
+	for i, t := range tokens[start:] {
+		if t.delim == begin && t.level == level {
+			s = i
+			start = start + i + 1
+			break
 		}
-		panic("invalid token to String conversion")
 	}
-	return t.text
+
+	if s < 0 { // didn't find begin
+		return -1, -1
+	}
+
+	// find end
+	for i, t := range tokens[start:] {
+		if t.delim == end && t.level == level {
+			// found end
+			return s, start + i
+		}
+	}
+
+	// didn't find end
+	return -1, -1
 }
 
-func (t *token) Inline() Inline {
-	if t.elem != nil {
-		return t.elem
-	}
-	return Text(t.String())
-}
-
-func (p *partial) pushdelim(r rune) {
-	n := len(p.tokens) - 1
-	canadd := n >= 0 && p.tokens[n].elem == nil
-	if canadd && p.tokens[n].delim == r {
-		p.tokens[n].count++
-	} else {
-		p.tokens = append(p.tokens, token{delim: r, count: 1})
-	}
-}
-
-func (p *partial) pushrune(r rune) {
-	n := len(p.tokens) - 1
-	canadd := n >= 0 && p.tokens[n].elem == nil
-	if canadd && p.tokens[n].delim == 0 {
-		p.tokens[n].text += string(r)
-	} else {
-		p.tokens = append(p.tokens, token{text: string(r)})
-	}
-}
-
+/*
 func findpairmin(tokens []token, mincount int) (s, e int) {
 	var first [96]int
 	first['*'] = -1
 	first['_'] = -1
 
 	for i, t := range tokens {
-		if t.count >= mincount {
+		if t.level >= mincount {
 			if t.delim == '*' || t.delim == '_' {
 				if first[t.delim] >= 0 {
 					return first[t.delim], i
@@ -119,12 +133,6 @@ func finddelimpair(tokens []token, delim rune) (s, e int) {
 	return -1, -1
 }
 
-func rawtext(tokens []token) (text string) {
-	for _, t := range tokens {
-		text += t.String()
-	}
-	return text
-}
 
 func clone(tokens []token) []token {
 	x := make([]token, len(tokens))
@@ -170,42 +178,34 @@ func merge(tokens []token, count int) []Inline {
 
 	return merge(x, count)
 }
+*/
 
-func isdelim(r rune) bool {
-	return r == '*' || r == '_' || r == '`'
-}
-
-func replaceCodeSpans(tokens []token) []token {
-	s, e := finddelimpair(tokens, '`')
-	if s < 0 || e < 0 {
-		return tokens
+func tokenize(lines []string) (tokens []token) {
+	pushdelim := func(r rune) {
+		n := len(tokens) - 1
+		canadd := n >= 0 && tokens[n].elem == nil
+		if canadd && tokens[n].delim == r {
+			tokens[n].level++
+		} else {
+			tokens = append(tokens, token{delim: r, level: 1})
+		}
 	}
 
-	tokens[s].count -= 1
-	if tokens[s].count == 0 {
-		tokens[s].delim = 0
+	pushrune := func(r rune) {
+		n := len(tokens) - 1
+		canadd := n >= 0 && tokens[n].elem == nil
+		if canadd && tokens[n].delim == 0 {
+			tokens[n].text += string(r)
+		} else {
+			tokens = append(tokens, token{text: string(r)})
+		}
 	}
-	tokens[e].count -= 1
-	if tokens[e].count == 0 {
-		tokens[e].delim = 0
-	}
 
-	text := rawtext(tokens[s:e])
-	tail := replaceCodeSpans(tokens[e:])
-
-	result := tokens[:s]
-	result = append(result, token{elem: CodeSpan(text)})
-	result = append(result, tail...)
-	return result
-}
-
-func tokenizeParagraph(lines []string) *Paragraph {
-	p := partial{}
 	for i, line := range lines {
 		escapenext := false
 		for _, r := range line {
 			if escapenext {
-				p.pushrune(r)
+				pushrune(r)
 				escapenext = false
 				continue
 			}
@@ -214,29 +214,76 @@ func tokenizeParagraph(lines []string) *Paragraph {
 				continue
 			}
 
-			if isdelim(r) {
-				p.pushdelim(r)
+			if markupDelimiter(r) {
+				pushdelim(r)
 			} else {
-				p.pushrune(r)
+				pushrune(r)
 			}
 		}
 
 		if i+1 != len(lines) {
-			p.tokens = append(p.tokens, token{
+			tokens = append(tokens, token{
 				elem: SoftBreak{},
 			})
 		}
 	}
 
-	p.tokens = replaceCodeSpans(p.tokens)
+	return tokens
+}
 
-	c := 0
-	for _, t := range p.tokens {
-		if c < t.count {
-			c = t.count
+func linesToParagraph(lines []string) *Paragraph {
+	tokens := tokenize(lines)
+	tokens = replaceCodeSpans(tokens)
+
+	var inlines []Inline
+
+	text := ""
+	for _, t := range tokens {
+		if t.elem != nil {
+			if text != "" {
+				inlines = append(inlines, Text(text))
+				text = ""
+			}
+			inlines = append(inlines, t.elem)
+		} else {
+			text += t.String()
 		}
 	}
-	inline := merge(p.tokens, c)
+	if text != "" {
+		inlines = append(inlines, Text(text))
+	}
 
-	return &Paragraph{inline}
+	return &Paragraph{inlines}
+}
+
+/* utilities for tokens */
+
+func (t *token) isempty() bool {
+	return t.text == "" && t.level == 0 && t.elem == nil
+}
+
+func (t *token) String() string {
+	if t.delim != 0 {
+		if t.level == 0 {
+			return ""
+		}
+		return strings.Repeat(string(t.delim), t.level)
+	}
+	if t.elem != nil {
+		if _, ok := t.elem.(SoftBreak); ok {
+			return "\n"
+		}
+		if _, ok := t.elem.(HardBreak); ok {
+			return "\n"
+		}
+		panic("invalid token to String conversion")
+	}
+	return t.text
+}
+
+func (t *token) Inline() Inline {
+	if t.elem != nil {
+		return t.elem
+	}
+	return Text(t.String())
 }

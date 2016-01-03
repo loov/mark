@@ -27,6 +27,7 @@ func Text(s string) mark.Text                { return mark.Text(s) }
 func Para(elems ...mark.Inline) *mark.Paragraph { return &mark.Paragraph{Items: elems} }
 func Em(elems ...mark.Inline) mark.Emphasis     { return mark.Emphasis(elems) }
 func Bold(elems ...mark.Inline) mark.Bold       { return mark.Bold(elems) }
+func CodeSpan(s string) mark.CodeSpan           { return mark.CodeSpan(s) }
 
 func Link(href string, title ...mark.Inline) mark.Link {
 	t := Para(title...)
