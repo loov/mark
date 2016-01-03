@@ -4,17 +4,15 @@ import "strings"
 
 // Algorithm for marking up
 // 0.   tokenize
-// 1.   resolve any code spans;
-// 2.   resolve any links, call `markup` starting from 3,
-//      find starting [ and ending ]( and final );
-// 3.   N := maximum number of markup tokens in line;
-// 4.0. for ; N > 0; N -- {
-// 4.1.    s, t := first markup sequence with at least length N;
-// 4.2.    e := next matching sequence with at least length N and token t;
-// 4.3.    recurse `markup` on s..e, where unused tokens are inside of the span;
-// 4.4.    if tokens weren't used when recursing, keep them outside of the span;
-// 4.5. }
-// 5.   convert all the items to their appropriate types,
+// 1.   resolve code spans and links
+// 2.   N := maximum number of markup tokens in line;
+// 3.0. for ; N > 0; N -- {
+// 3.1.    s, t := first markup sequence with at least length N;
+// 3.2.    e := next matching sequence with at least length N and token t;
+// 3.3.    recurse `markup` on s..e, where unused tokens are inside of the span;
+// 3.4.    if tokens weren't used when recursing, keep them outside of the span;
+// 3.5. }
+// 4.   convert all the items to their appropriate types,
 //      concatenating when possible.
 
 type token struct {
@@ -44,14 +42,128 @@ func delimhistogram(tokens []token, isdelim func(r rune) bool) (hist []int) {
 	return
 }
 
-func replaceCodeSpans(tokens []token) []token {
+func delimcount(tokens []token, delim rune) (count int) {
+	for _, t := range tokens {
+		if t.delim == delim {
+			count += t.level
+		}
+	}
+	return count
+}
+
+func resolveCodeSpans(tokens []token) (resolved []token) {
+	for s := 0; s < len(tokens); s++ {
+		t := tokens[s]
+		if t.delim == '`' {
+			e := s + findnext('`', t.level, true, tokens[s:])
+			if e < s {
+				resolved = append(resolved, t)
+				continue
+			}
+			resolved = append(resolved, token{elem: CodeSpan(rawtext(tokens[s+1 : e]))})
+			s = e
+		} else {
+			resolved = append(resolved, t)
+		}
+	}
+	return
+}
+
+func resolvePriority(tokens []token) (resolved []token) {
+	for s := 0; s < len(tokens); s++ {
+		t := tokens[s]
+		switch t.delim {
+		case '`':
+			e := s + findnext('`', t.level, true, tokens[s:])
+			if e < s {
+				resolved = append(resolved, t)
+				continue
+			}
+			resolved = append(resolved, token{elem: CodeSpan(rawtext(tokens[s+1 : e]))})
+			s = e
+		case '[':
+			// [title](link)
+			titlestart := s
+			titleend := titlestart + findnext(']', 1, false, tokens[titlestart:])
+			if titleend < titlestart || tokens[titleend].level != 1 {
+				resolved = append(resolved, t)
+				continue
+			}
+			// check ](
+			if titleend+1 >= len(tokens) || tokens[titleend+1].delim != '(' {
+				resolved = append(resolved, t)
+				continue
+			}
+			// find )
+			linkstart := titleend + 1
+			linkend := linkstart + findnext(')', 1, true, tokens[linkstart:])
+			if linkend < linkstart {
+				resolved = append(resolved, t)
+				continue
+			}
+
+			// temporarily remove link from delimiter levels
+			tokens[titlestart].level--
+			tokens[titleend].level--
+			tokens[linkstart].level--
+			tokens[linkend].level--
+
+			spanned := resolveCodeSpansHigh(tokens[titlestart:titleend])
+
+			// check whether we have an unmatched starting [
+			startcount, endcount := delimcount(spanned, '['), delimcount(spanned, ']')
+			if startcount > endcount {
+				delta := endcount - startcount
+
+			}
+
+			title := resolveText(spanned)
+			link := rawtext(tokens[linkstart : linkend-1])
+			trailingparen := tokens[linkend]
+
+			// undo level removal
+			tokens[titlestart].level++
+			tokens[titleend].level++
+			tokens[linkstart].level++
+			tokens[linkend].level++
+
+			if len(title) > 0 && title[0].delim == '[' &&
+
+			// do we have a multiple [ for a titlestart?
+			if t.level > 1 {
+				t.level--
+				resolved.append(resolved, t)
+			}
+
+			s = linkend
+		default:
+			resolved = append(resolved, t)
+		}
+	}
+	return
+}
+
+func findnext(delim rune, level int, exact bool, tokens []token) int {
+	for off, t := range tokens[start:] {
+		if t.delim == delim {
+			if exact && level == t.level {
+				return start + off
+			} else if level < t.level {
+				return start + off
+			}
+		}
+	}
+	return -1
+}
+
+func resolveCodeSpansHigh(tokens []token) []token {
 	hist := delimhistogram(tokens, func(r rune) bool { return r == '`' })
 	for level := len(hist) - 1; level >= 1; level-- {
 		count := hist[level]
 		var s, e int
 		s = -1
 		for ; count >= 2; count -= 2 {
-			s, e = findpair(s+1, tokens, level, '`', '`')
+			s, e = findexactpair(s+1, tokens, level, '`', '`')
 			if s < 0 || e < 0 {
 				break
 			}
@@ -68,7 +180,55 @@ func replaceCodeSpans(tokens []token) []token {
 	return tokens
 }
 
-func findpair(start int, tokens []token, level int, begin, end rune) (s, e int) {
+func rawtext(tokens []token) []token {
+
+}
+
+func resolveLinks(tokens []token) []token {
+	start := 0
+	for {
+		s, e := findpair(start, tokens, 1, '[', ']')
+		if s < 0 || e < 0 {
+			return tokens
+		}
+		head, linktext, tail := tokens[:s:s], tokens[s:e+1], tokens[e+1:]
+
+		s, e = findpair(0, tail, 1, '(', ')')
+		if s != 0 || e < 0 {
+			return tokens
+		}
+
+		tokens[s].level -= 1
+		tokens[e].level -= 1
+		inner := resolveText(tokens[s:e+1], true)
+
+		start = s + len(inner)
+		tokens = append(front, inner...)
+		tokens = append(tokens, tail...)
+	}
+}
+
+func resolveText(tokens []token) []token {
+	r := []token{}
+
+	text := ""
+	for _, t := range tokens {
+		if t.elem != nil {
+			if text != "" {
+				inlines = append(inlines, Text(text))
+				text = ""
+			}
+			inlines = append(inlines, t.elem)
+		} else {
+			text += t.String()
+		}
+	}
+	if text != "" {
+		inlines = append(inlines, Text(text))
+	}
+}
+
+func findexactpair(start int, tokens []token, level int, begin, end rune) (s, e int) {
 	s, e = -1, -1
 	if start > len(tokens) {
 		return
@@ -90,6 +250,37 @@ func findpair(start int, tokens []token, level int, begin, end rune) (s, e int) 
 	// find end
 	for i, t := range tokens[start:] {
 		if t.delim == end && t.level == level {
+			// found end
+			return s, start + i
+		}
+	}
+
+	// didn't find end
+	return -1, -1
+}
+
+func findpair(start int, tokens []token, level int, begin, end rune) (s, e int) {
+	s, e = -1, -1
+	if start > len(tokens) {
+		return
+	}
+
+	// find begin
+	for i, t := range tokens[start:] {
+		if t.delim == begin && t.level >= level {
+			s = i
+			start = start + i + 1
+			break
+		}
+	}
+
+	if s < 0 { // didn't find begin
+		return -1, -1
+	}
+
+	// find end
+	for i, t := range tokens[start:] {
+		if t.delim == end && t.level >= level {
 			// found end
 			return s, start + i
 		}
@@ -233,24 +424,16 @@ func tokenize(lines []string) (tokens []token) {
 
 func linesToParagraph(lines []string) *Paragraph {
 	tokens := tokenize(lines)
-	tokens = replaceCodeSpans(tokens)
+	tokens = resolveCodeSpansHigh(tokens)
+	tokens = resolveLinks(tokens)
+	tokens = resolveText(tokens, false)
 
 	var inlines []Inline
-
-	text := ""
 	for _, t := range tokens {
-		if t.elem != nil {
-			if text != "" {
-				inlines = append(inlines, Text(text))
-				text = ""
-			}
-			inlines = append(inlines, t.elem)
-		} else {
-			text += t.String()
+		if t.elem == nil {
+			panic("unhandled delimiter or text")
 		}
-	}
-	if text != "" {
-		inlines = append(inlines, Text(text))
+		inlines = append(inlines, t.elem)
 	}
 
 	return &Paragraph{inlines}
