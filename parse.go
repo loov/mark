@@ -35,7 +35,7 @@ type state struct {
 	errors   []error
 
 	partial struct {
-		paragraph []string
+		lines []string
 	}
 }
 
@@ -122,15 +122,15 @@ func (parse *parse) run() {
 
 // flushes pending paragraph
 func (parse *parse) flushParagraph() {
-	if len(parse.partial.paragraph) == 0 {
+	if len(parse.partial.lines) == 0 {
 		return
 	}
 
-	para := tokenizeParagraph(parse.partial.paragraph)
+	para := linesToParagraph(parse.partial.lines)
 	seq := parse.currentSequence(lastlevel)
 	seq.Append(para)
 
-	parse.partial.paragraph = nil
+	parse.partial.lines = nil
 }
 
 func (parse *parse) separator() {
@@ -240,7 +240,7 @@ func (parse *parse) numlist() {
 }
 
 func (parse *parse) setext() {
-	if len(parse.partial.paragraph) != 1 {
+	if len(parse.partial.lines) != 1 {
 		parse.line()
 		return
 	}
@@ -259,9 +259,9 @@ func (parse *parse) setext() {
 		panic("Invalid setext header symbol " + string(x))
 	}
 
-	parse.partial.paragraph[0] = strings.TrimSpace(parse.partial.paragraph[0])
-	section.Title = *tokenizeParagraph(parse.partial.paragraph)
-	parse.partial.paragraph = nil
+	parse.partial.lines[0] = strings.TrimSpace(parse.partial.lines[0])
+	section.Title = *linesToParagraph(parse.partial.lines)
+	parse.partial.lines = nil
 
 	seq := parse.currentSequence(section.Level)
 	seq.Append(section)
@@ -380,13 +380,12 @@ func (parse *parse) line() {
 	reader := parse.reader
 
 	reader.ignore(' ')
-	parse.partial.paragraph =
-		append(parse.partial.paragraph, reader.rest())
+	parse.partial.lines = append(parse.partial.lines, reader.rest())
 }
 
 func (parse *parse) inline() *Paragraph {
 	reader := parse.reader
-	return tokenizeParagraph([]string{reader.rest()})
+	return linesToParagraph([]string{reader.rest()})
 }
 
 func order(xs ...int) bool {
