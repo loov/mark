@@ -49,6 +49,7 @@ func Code(lang string, lines ...string) *mark.Code {
 type TestCase struct {
 	In   string
 	Exp  mark.Sequence
+	Skip bool
 	Errs []string
 }
 
@@ -56,6 +57,10 @@ type TestCases []TestCase
 
 func (cases TestCases) Run(t *testing.T) {
 	for i, tc := range cases {
+		if tc.Skip {
+			continue
+		}
+
 		// unix
 		t1 := tc
 		t1.In = strings.Replace(tc.In, "\n", "\x0A", -1)
@@ -115,4 +120,11 @@ func (tc *TestCase) Run(br string, i int, t *testing.T) (ok bool) {
 		ok = false
 	}
 	return
+}
+
+func ifthen(v bool, a, b mark.Sequence) mark.Sequence {
+	if v {
+		return a
+	}
+	return b
 }
