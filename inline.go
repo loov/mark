@@ -33,7 +33,7 @@ func (Callout) TagInline() {}
 func (Index) TagInline()   {}
 func (Link) TagInline()    {}
 
-// Callout is an element that indicates relation to someother callout `<span class="callout">`
+// Callout is an element that indicates relation to some other callout `<span class="callout">`
 type Callout string
 
 // Index is a hidden point that word-index can link to `<span class="index">`
