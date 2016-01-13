@@ -10,6 +10,10 @@ Omnis quidem mollitia inv*entore*. Harum temporibus voluptates
 eum adipisci, `perferendis *molestias*` dignissimos, porro *repellat,*
 voluptas quo quas quidem facere. *Deserunt *voluptatum, odio.
 
+Link to [outside](http://example.com).
+Link [inside](#inside).
+
+
    H1 **tag**
    ==================
 
