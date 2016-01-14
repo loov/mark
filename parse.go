@@ -391,8 +391,6 @@ func (parent *parse) include() {
 	parentreader := parent.reader
 	parent.flushParagraph()
 
-	//TODO: add recursion protection
-
 	parentreader.ignoreN('{', 2)
 	parentreader.ignoreTrailing('}')
 
