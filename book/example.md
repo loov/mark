@@ -3,6 +3,11 @@ Omnis quidem mollitia inv*entore*. Harum temporibus voluptates
 eum adipisci, perferendis *molestias* dignissimos, porro *repellat,*
 voluptas quo quas quidem facere. *Deserunt *voluptatum, odio.
 
+{{include.md}}
+
+> # Block Quoted include
+> {{include.md}}
+
 # H1 tag
 
 Lorem ipsum dolor *sit \*amet*, consectetur adipisicing elit.
@@ -88,3 +93,5 @@ Double quoted:
   * 5
   *
  * 6
+
+{{include.md}}

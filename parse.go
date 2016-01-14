@@ -3,6 +3,7 @@ package mark
 import (
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -110,10 +111,10 @@ func (parse *parse) run() {
 			parse.code()
 		case line.StartsWith("```"):
 			parse.fenced()
+		case line.StartsWith("{{"):
+			parse.include()
 		case line.StartsWith("{"):
 			parse.modifier()
-		case line.StartsWith("<{{"):
-			parse.include()
 		default:
 			parse.line()
 		}
@@ -371,9 +372,42 @@ func (parse *parse) modifier() {
 	panic("modifier not implemented")
 }
 
-func (parse *parse) include() {
-	parse.flushParagraph()
-	panic("include not implemented")
+func (parent *parse) include() {
+	parentreader := parent.reader
+	parent.flushParagraph()
+
+	//TODO: add recursion protection
+
+	parentreader.ignoreN('{', 2)
+	parentreader.ignoreTrailing('}')
+
+	file := strings.TrimSpace(parentreader.rest())
+	rel := path.Clean(path.Join(path.Dir(parent.path), file))
+
+	child := &parse{
+		dir:    parent.dir,
+		path:   rel,
+		state:  &state{},
+		reader: &reader{},
+	}
+
+	content, err := child.dir.ReadFile(rel)
+	if err != nil {
+		parent.check(fmt.Errorf("Failed to read file %v: %v", rel, err))
+		return
+	}
+
+	child.reader.content = string(content)
+	child.run()
+
+	seq := parent.currentSequence(lastlevel)
+	for _, block := range child.sequence {
+		if sec, ok := block.(*Section); ok {
+			seq = parent.currentSequence(sec.Level)
+		}
+		seq.Append(block)
+	}
+	parent.errors = append(child.errors)
 }
 
 func (parse *parse) line() {

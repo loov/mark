@@ -158,7 +158,7 @@ func resolve(tokens []token) []Inline {
 }
 
 func linesToParagraph(lines []string) *Paragraph {
-	return &Paragraph{resolve(tokenize(lines))}
+	return &Paragraph{resolve(tokenizeLines(lines))}
 }
 
 /* tokenization */
@@ -177,7 +177,7 @@ type token struct {
 	elem  Inline
 }
 
-func tokenize(lines []string) (tokens []token) {
+func tokenizeLines(lines []string) (tokens []token) {
 	pushdelim := func(r rune) {
 		n := len(tokens) - 1
 		canadd := n >= 0 && tokens[n].elem == nil
