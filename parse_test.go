@@ -1,6 +1,10 @@
 package mark_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/loov/mark"
+)
 
 func TestParagraph(t *testing.T) {
 	TestCases{{
@@ -125,5 +129,51 @@ func TestIndentCode(t *testing.T) {
 	}, { // paragraph ends
 		In:  "    A\nB",
 		Exp: Seq(Code("", "A"), Para(Text("B"))),
+	}}.Run(t)
+}
+
+func TestInclude(t *testing.T) {
+	TestCases{{ // simple include
+		In: "{{include.md}}",
+		FS: mark.VirtualDir{
+			"include.md": "Content",
+		},
+		Exp: Seq(Para(Text("Content"))),
+	}, { // nested include
+		In: "{{include.md}}",
+		FS: mark.VirtualDir{
+			"include.md":  "{{include2.md}}",
+			"include2.md": "Content",
+		},
+		Exp: Seq(Para(Text("Content"))),
+	}, { // include in quote
+		In: "> {{include.md}}",
+		FS: mark.VirtualDir{
+			"include.md": "Content",
+		},
+		Exp: Seq(Quote(Para(Text("Content")))),
+	}, { // inclusion should follow same block rules
+		In: "# First\n{{include.md}}",
+		FS: mark.VirtualDir{
+			"include.md": "First\n# Second\nSecond",
+		},
+		Exp: Seq(
+			H(1, Para(Text("First")), Para(Text("First"))),
+			H(1, Para(Text("Second")), Para(Text("Second"))),
+		),
+	}, { // proper error with missing file
+		In: "{{include.md}}",
+		FS: mark.VirtualDir{
+			"include.md": "{{include2.md}}\nContent",
+		},
+		Exp:  Seq(Para(Text("Content"))),
+		Errs: []string{"include.md:1: Failed to read file include2.md: file does not exist"},
+	}, { // recursion protection
+		In: "{{include.md}}",
+		FS: mark.VirtualDir{
+			"include.md":  "{{include2.md}}",
+			"include2.md": "{{include.md}}",
+		},
+		Errs: []string{"include2.md:1: Cannot recursively include include.md"},
 	}}.Run(t)
 }

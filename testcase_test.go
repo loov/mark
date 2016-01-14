@@ -50,6 +50,7 @@ type TestCase struct {
 	In   string
 	Exp  mark.Sequence
 	Skip bool
+	FS   mark.FileSystem
 	Errs []string
 }
 
@@ -93,7 +94,7 @@ func (cases TestCases) Run(t *testing.T) {
 
 func (tc *TestCase) Run(br string, i int, t *testing.T) (ok bool) {
 	ok = true
-	out, errs := mark.ParseContent(nil, "main.md", []byte(tc.In))
+	out, errs := mark.ParseContent(tc.FS, "main.md", []byte(tc.In))
 
 	sameerr := len(errs) == len(tc.Errs)
 	if sameerr {

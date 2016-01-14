@@ -9,10 +9,12 @@ import (
 )
 
 type parse struct {
-	dir    Dir
+	fs     FileSystem
 	path   string
 	reader *reader
 	*state
+
+	parent *parse // can be nil
 }
 
 type ParseError struct {
@@ -41,7 +43,7 @@ type state struct {
 }
 
 func ParseFile(filename string) (Sequence, []error) {
-	dir := fs(filepath.Dir(filename))
+	dir := Dir(filepath.Dir(filename))
 	name := filepath.Base(filename)
 	data, err := dir.ReadFile(name)
 	if err != nil {
@@ -50,9 +52,9 @@ func ParseFile(filename string) (Sequence, []error) {
 	return ParseContent(dir, filename, data)
 }
 
-func ParseContent(dir Dir, filename string, content []byte) (Sequence, []error) {
+func ParseContent(fs FileSystem, filename string, content []byte) (Sequence, []error) {
 	parse := &parse{
-		dir:    dir,
+		fs:     fs,
 		path:   filename,
 		state:  &state{},
 		reader: &reader{},
@@ -163,28 +165,30 @@ func (parent *parse) quote() {
 		panic("sanity check: " + parent.reader.rest())
 	}
 
-	sub := &parse{
-		dir:    parent.dir,
+	child := &parse{
+		fs:     parent.fs,
 		path:   parent.path,
 		state:  &state{},
 		reader: &reader{},
-	}
-	*sub.reader = *parent.reader
 
-	sub.reader.setNextLineStart(parent.reader.head.start)
-	sub.reader.prefixes = append(sub.reader.prefixes, prefix{
+		parent: parent,
+	}
+	*child.reader = *parent.reader
+
+	child.reader.setNextLineStart(parent.reader.head.start)
+	child.reader.prefixes = append(child.reader.prefixes, prefix{
 		symbol: '>',
 	})
 
-	sub.run()
-	parent.reader.head = sub.reader.head
+	child.run()
+	parent.reader.head = child.reader.head
 
-	parent.errors = append(parent.errors, sub.errors...)
+	parent.errors = append(parent.errors, child.errors...)
 	seq := parent.currentSequence(lastlevel)
 	seq.Append(&Quote{
 		Category: "",
 		Title:    Paragraph{},
-		Content:  sub.sequence,
+		Content:  child.sequence,
 	})
 }
 
@@ -198,36 +202,38 @@ func (parent *parse) list() {
 	}
 
 	//TODO: fix
-	// Use sub-parser to parse a single list-item
+	// Use child-parser to parse a single list-item
 	// push list-item to the list at the end of current sequence
 
 	parent.reader.ignore(delim)
 	parent.reader.ignore(' ')
 
-	sub := &parse{
-		dir:    parent.dir,
+	child := &parse{
+		fs:     parent.fs,
 		path:   parent.path,
 		state:  &state{},
 		reader: &reader{},
-	}
-	*sub.reader = *parent.reader
 
-	sub.reader.setNextLineStart(parent.reader.head.start)
-	sub.reader.prefixes = append(sub.reader.prefixes, prefix{
+		parent: parent,
+	}
+	*child.reader = *parent.reader
+
+	child.reader.setNextLineStart(parent.reader.head.start)
+	child.reader.prefixes = append(child.reader.prefixes, prefix{
 		symbol: delim,
 	})
 
-	sub.run()
-	parent.reader.head = sub.reader.head
+	child.run()
+	parent.reader.head = child.reader.head
 
-	parent.errors = append(parent.errors, sub.errors...)
+	parent.errors = append(parent.errors, child.errors...)
 
 	list := &List{
 		Ordered: false,
 		Content: nil,
 	}
 
-	for _, item := range sub.sequence {
+	for _, item := range child.sequence {
 		list.Content = append(list.Content, Sequence{item})
 	}
 
@@ -372,6 +378,15 @@ func (parse *parse) modifier() {
 	panic("modifier not implemented")
 }
 
+func (parent *parse) hasPath(path string) bool {
+	for ; parent.parent != nil; parent = parent.parent {
+		if parent.path == path {
+			return true
+		}
+	}
+	return false
+}
+
 func (parent *parse) include() {
 	parentreader := parent.reader
 	parent.flushParagraph()
@@ -385,13 +400,20 @@ func (parent *parse) include() {
 	rel := path.Clean(path.Join(path.Dir(parent.path), file))
 
 	child := &parse{
-		dir:    parent.dir,
+		fs:     parent.fs,
 		path:   rel,
 		state:  &state{},
 		reader: &reader{},
+
+		parent: parent,
 	}
 
-	content, err := child.dir.ReadFile(rel)
+	if parent.hasPath(rel) {
+		parent.check(fmt.Errorf("Cannot recursively include %v", rel))
+		return
+	}
+
+	content, err := child.fs.ReadFile(rel)
 	if err != nil {
 		parent.check(fmt.Errorf("Failed to read file %v: %v", rel, err))
 		return
