@@ -34,6 +34,8 @@ func main() {
 			pre  { background: #000; color: #fff; padding: 0.5em; }
 			.separator { text-align: center; background: #eee; }
 
+			.warning { background: #fee; }
+
 			p { margin: 0.5em 0; }
 			ul {
 				border: 1px solid #ccc;

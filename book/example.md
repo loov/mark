@@ -10,6 +10,7 @@ voluptas quo quas quidem facere. *Deserunt *voluptatum, odio.
 
 # H1 tag
 
+{.warning}
 Lorem ipsum dolor *sit \*amet*, consectetur adipisicing elit.
 Omnis quidem mollitia inv*entore*. Harum temporibus voluptates
 eum adipisci, `perferendis *molestias*` dignissimos, porro *repellat,*

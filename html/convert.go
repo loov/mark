@@ -67,6 +67,12 @@ func ConvertBlock(block mark.Block) (r string) {
 			r += ConvertBlock(item)
 		}
 		return r
+	case *mark.Modifier:
+		starttag := "<div class=\"" + template.JSEscapeString(el.Class) + "\">"
+		for _, item := range el.Content {
+			r += ConvertBlock(item)
+		}
+		return starttag + r + "</div>"
 	case *mark.Code:
 		starttag := "<pre><code>"
 		if el.Language != "" {

@@ -142,6 +142,21 @@ func (rd *reader) ignoreTrailing(r rune) (count int) {
 	return
 }
 
+func (rd *reader) ignoreTrailingN(r rune, n int) (count int) {
+	//TODO: cleanup
+	if utf8.RuneLen(r) > 1 {
+		panic("unimplemented for trailing large runes")
+	}
+	for rd.head.at < rd.head.stop && rune(rd.content[rd.head.stop-1]) == r {
+		rd.head.stop--
+		count++
+		if count >= n {
+			return
+		}
+	}
+	return
+}
+
 func (rd *reader) ignoreSpaceTrailing(r rune) {
 	if utf8.RuneLen(r) > 1 {
 		panic("unimplemented for trailing large runes")

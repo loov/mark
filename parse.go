@@ -39,6 +39,7 @@ type state struct {
 
 	partial struct {
 		lines []string
+		class string
 	}
 }
 
@@ -126,14 +127,23 @@ func (parse *parse) run() {
 // flushes pending paragraph
 func (parse *parse) flushParagraph() {
 	if len(parse.partial.lines) == 0 {
+		parse.partial.class = ""
 		return
 	}
 
 	para := linesToParagraph(parse.partial.lines)
 	seq := parse.currentSequence(lastlevel)
-	seq.Append(para)
+	if parse.partial.class != "" {
+		seq.Append(&Modifier{
+			Class:   parse.partial.class,
+			Content: Sequence{para},
+		})
+	} else {
+		seq.Append(para)
+	}
 
 	parse.partial.lines = nil
+	parse.partial.class = ""
 }
 
 func (parse *parse) separator() {
@@ -374,8 +384,16 @@ func (parse *parse) fenced() {
 }
 
 func (parse *parse) modifier() {
+	//TODO: figure out whether this is the best way?
 	parse.flushParagraph()
-	panic("modifier not implemented")
+	reader := parse.reader
+
+	reader.ignoreN('{', 1)
+	reader.ignore(' ')
+	reader.ignoreN('.', 1)
+	reader.ignoreTrailingN('}', 1)
+
+	parse.partial.class = strings.TrimSpace(reader.rest())
 }
 
 func (parent *parse) hasPath(path string) bool {
