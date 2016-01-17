@@ -11,7 +11,10 @@ import (
 	"github.com/loov/mark"
 )
 
-var linkTemplate = template.Must(template.New("").Parse(`<a href="{{.Href}}">{{.Title}}</a>`))
+var (
+	linkTemplate  = template.Must(template.New("").Parse(`<a href="{{.Href}}">{{.Title}}</a>`))
+	imageTemplate = template.Must(template.New("").Parse(`<figure><img src="{{.Href}}" alt="{{.Title}}" title="{{.Title}}">{{if .Title}}<figcaption>{{.Title}}</figcaption>{{end}}</figure>`))
+)
 
 func exec(t *template.Template, data interface{}) string {
 	var buf bytes.Buffer
@@ -47,6 +50,11 @@ func ConvertInline(inline mark.Inline) (r string) {
 		return exec(linkTemplate, map[string]interface{}{
 			"Href":  el.Href,
 			"Title": template.HTML(ConvertParagraph(&el.Title)),
+		})
+	case mark.Image:
+		return exec(imageTemplate, map[string]interface{}{
+			"Href":  el.Href,
+			"Title": template.HTML(ConvertParagraph(&el.Alt)),
 		})
 	default:
 		panic(fmt.Errorf("unimplemented: %#+v", inline))

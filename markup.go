@@ -49,20 +49,62 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 				}
 				resolved = append(resolved, token{elem: CodeSpan(rawtext(tokens[s+1 : e]))})
 				s = e
-			case '[':
-				e := findnextdelim(']', tokens, s+1)
-				if e < 0 || e+1 >= len(tokens) || tokens[e+1].delim != '(' {
+			case '!':
+				// TODO: implement alternate captions `![Alt text](/path/to/img.jpg "Optional title")`
+				// TODO: implement reference links `![Alt text][id]`
+				//                                 `[id]: url/to/image  "Optional title attribute"`
+				if s+1 >= len(tokens) || tokens[s].level != 1 || tokens[s+1].delim != '[' {
 					resolved = append(resolved, t)
 					continue
 				}
-				linkend := findnextdelim(')', tokens, e+1)
+
+				capstart := s + 1
+				capeend := findnextdelim(']', tokens, capstart+1)
+				if capeend < 0 || capeend+1 >= len(tokens) || tokens[capeend+1].delim != '(' {
+					resolved = append(resolved, t)
+					continue
+				}
+				linkend := findnextdelim(')', tokens, capeend+1)
 				if linkend < 0 {
 					resolved = append(resolved, t)
 					continue
 				}
 
-				caption := cloneTokens(tokens[s : e+1])
-				link := cloneTokens(tokens[e+1 : linkend+1])
+				caption := cloneTokens(tokens[capstart : capeend+1])
+				link := cloneTokens(tokens[capeend+1 : linkend+1])
+
+				// remove wrapping []
+				caption[0].level--
+				caption[len(caption)-1].level--
+				// remove wrapping ()
+				link[0].level--
+				link[len(link)-1].level--
+
+				resolved = append(resolved, token{
+					elem: Image{
+						Alt:  Paragraph{resolve(caption)},
+						Href: rawtext(link), //TODO: use the current working directory
+					},
+				})
+				s = linkend
+			case '[':
+				//TODO: implement title attribute `[an example](http://example.com/ "Title")`
+				//TODO: implement reference links `This is [an example][id] reference-style link.`
+				//                                `[id]: example.com  "Optional title attribute"`
+				capstart := s
+				capeend := findnextdelim(']', tokens, capstart+1)
+				if capeend < 0 || capeend+1 >= len(tokens) || tokens[capeend+1].delim != '(' {
+					resolved = append(resolved, t)
+					continue
+				}
+				linkend := findnextdelim(')', tokens, capeend+1)
+				if linkend < 0 {
+					resolved = append(resolved, t)
+					continue
+				}
+
+				caption := cloneTokens(tokens[capstart : capeend+1])
+				link := cloneTokens(tokens[capeend+1 : linkend+1])
 
 				// remove wrapping []
 				caption[0].level--
@@ -164,7 +206,7 @@ func linesToParagraph(lines []string) *Paragraph {
 /* tokenization */
 func markupDelimiter(r rune) bool {
 	switch r {
-	case '`', '[', ']', '(', ')', '*', '_':
+	case '`', '[', ']', '(', ')', '*', '_', '!':
 		return true
 	}
 	return false

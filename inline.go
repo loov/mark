@@ -31,6 +31,7 @@ type HardBreak struct{}
 
 func (Callout) TagInline() {}
 func (Index) TagInline()   {}
+func (Image) TagInline()   {}
 func (Link) TagInline()    {}
 
 // Callout is an element that indicates relation to some other callout `<span class="callout">`
@@ -46,6 +47,12 @@ type Link struct {
 	Href    string
 	Caption string
 	Title   Paragraph
+}
+
+// Image refers to an image `<img>`
+type Image struct {
+	Alt  Paragraph
+	Href string
 }
 
 func (InlineModifier) TagInline() {}

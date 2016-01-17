@@ -48,7 +48,6 @@ type Modifier struct {
 
 func (Code) TagBlock()      {}
 func (List) TagBlock()      {}
-func (Image) TagBlock()     {}
 func (Separator) TagBlock() {}
 
 // Code is a block of code `<pre>`
@@ -61,12 +60,6 @@ type Code struct {
 type List struct {
 	Ordered bool
 	Content []Sequence
-}
-
-// Image refers to an image `<img>`
-type Image struct {
-	Path string
-	Alt  Paragraph
 }
 
 // Separator is a horizontal-rule with an optional title `<hr>`

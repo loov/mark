@@ -253,6 +253,7 @@ func (parent *parse) list() {
 
 func (parse *parse) numlist() {
 	parse.flushParagraph()
+	//TODO: implement
 	panic("numlist not implemented")
 }
 
