@@ -50,7 +50,7 @@ func ParseFile(filename string) (Sequence, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	return ParseContent(dir, filename, data)
+	return ParseContent(dir, name, data)
 }
 
 func ParseContent(fs FileSystem, filename string, content []byte) (Sequence, []error) {
