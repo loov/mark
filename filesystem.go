@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type FileSystem interface {
@@ -20,6 +21,7 @@ func (dir Dir) ReadFile(file string) ([]byte, error) {
 type VirtualDir map[string]string
 
 func (dir VirtualDir) ReadFile(file string) ([]byte, error) {
+	file = strings.TrimPrefix(file, "/")
 	content, ok := dir[file]
 	if !ok {
 		return nil, os.ErrNotExist

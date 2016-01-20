@@ -9,6 +9,7 @@ Warning: Work in progress, API-s will change.
 * Implement links/images by reference and footnotes
 * Implement better markup parsing
 * Implement HTML parsing
+* Implement callouts.
 * Remove `Separator.Title` and replace it with something better
 * Cleanup `reader.ignoreTrailingN`
 * Handle empty item in list

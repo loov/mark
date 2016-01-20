@@ -2,7 +2,11 @@ package mark
 
 import "strings"
 
-func findnext(delim rune, level int, tokens []token, start int) int {
+type markup struct {
+	*parse
+}
+
+func (markup markup) findnext(delim rune, level int, tokens []token, start int) int {
 	for i, t := range tokens[start:] {
 		if t.isempty() {
 			continue
@@ -14,7 +18,7 @@ func findnext(delim rune, level int, tokens []token, start int) int {
 	return -1
 }
 
-func findnextdelim(delim rune, tokens []token, start int) int {
+func (markup markup) findnextdelim(delim rune, tokens []token, start int) int {
 	for i, t := range tokens[start:] {
 		if t.isempty() {
 			continue
@@ -26,13 +30,13 @@ func findnextdelim(delim rune, tokens []token, start int) int {
 	return -1
 }
 
-func cloneTokens(tokens []token) []token {
+func (markup markup) cloneTokens(tokens []token) []token {
 	r := make([]token, len(tokens))
 	copy(r, tokens)
 	return r
 }
 
-func resolveSimple(tokens []token, links bool) (resolved []token) {
+func (markup markup) simple(tokens []token, links bool) (resolved []token) {
 	for s := 0; s < len(tokens); s++ {
 		t := tokens[s]
 		if t.isempty() {
@@ -42,12 +46,12 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 		if links {
 			switch t.delim {
 			case '`':
-				e := findnext('`', t.level, tokens, s+1)
+				e := markup.findnext('`', t.level, tokens, s+1)
 				if e < 0 {
 					resolved = append(resolved, t)
 					continue
 				}
-				resolved = append(resolved, token{elem: CodeSpan(rawtext(tokens[s+1 : e]))})
+				resolved = append(resolved, token{elem: CodeSpan(markup.rawtext(tokens[s+1 : e]))})
 				s = e
 			case '!':
 				// TODO: implement alternate captions `![Alt text](/path/to/img.jpg "Optional title")`
@@ -59,19 +63,19 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 				}
 
 				capstart := s + 1
-				capeend := findnextdelim(']', tokens, capstart+1)
+				capeend := markup.findnextdelim(']', tokens, capstart+1)
 				if capeend < 0 || capeend+1 >= len(tokens) || tokens[capeend+1].delim != '(' {
 					resolved = append(resolved, t)
 					continue
 				}
-				linkend := findnextdelim(')', tokens, capeend+1)
+				linkend := markup.findnextdelim(')', tokens, capeend+1)
 				if linkend < 0 {
 					resolved = append(resolved, t)
 					continue
 				}
 
-				caption := cloneTokens(tokens[capstart : capeend+1])
-				link := cloneTokens(tokens[capeend+1 : linkend+1])
+				caption := markup.cloneTokens(tokens[capstart : capeend+1])
+				link := markup.cloneTokens(tokens[capeend+1 : linkend+1])
 
 				// remove wrapping []
 				caption[0].level--
@@ -82,8 +86,8 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 
 				resolved = append(resolved, token{
 					elem: Image{
-						Alt:  Paragraph{resolve(caption)},
-						Href: rawtext(link), //TODO: use the current working directory
+						Alt:  Paragraph{markup.resolve(caption)},
+						Href: markup.rawtext(link), //TODO: use the current working directory
 					},
 				})
 				s = linkend
@@ -92,19 +96,19 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 				//TODO: implement reference links `This is [an example][id] reference-style link.`
 				//                                `[id]: example.com  "Optional title attribute"`
 				capstart := s
-				capeend := findnextdelim(']', tokens, capstart+1)
+				capeend := markup.findnextdelim(']', tokens, capstart+1)
 				if capeend < 0 || capeend+1 >= len(tokens) || tokens[capeend+1].delim != '(' {
 					resolved = append(resolved, t)
 					continue
 				}
-				linkend := findnextdelim(')', tokens, capeend+1)
+				linkend := markup.findnextdelim(')', tokens, capeend+1)
 				if linkend < 0 {
 					resolved = append(resolved, t)
 					continue
 				}
 
-				caption := cloneTokens(tokens[capstart : capeend+1])
-				link := cloneTokens(tokens[capeend+1 : linkend+1])
+				caption := markup.cloneTokens(tokens[capstart : capeend+1])
+				link := markup.cloneTokens(tokens[capeend+1 : linkend+1])
 
 				// remove wrapping []
 				caption[0].level--
@@ -115,8 +119,8 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 
 				resolved = append(resolved, token{
 					elem: Link{
-						Title: Paragraph{resolve(caption)},
-						Href:  rawtext(link),
+						Title: Paragraph{markup.resolve(caption)},
+						Href:  markup.rawtext(link),
 					},
 				})
 				s = linkend
@@ -126,7 +130,7 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 		} else {
 			switch t.delim {
 			case '*', '_':
-				e := findnextdelim(t.delim, tokens, s+1)
+				e := markup.findnextdelim(t.delim, tokens, s+1)
 				if e < 0 {
 					resolved = append(resolved, t)
 					continue
@@ -137,14 +141,14 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 					minlevel = tokens[e].level
 				}
 
-				content := cloneTokens(tokens[s:e])
+				content := markup.cloneTokens(tokens[s:e])
 				content[0].level -= minlevel
 				tokens[e].level -= minlevel
 
 				if minlevel >= 2 {
-					resolved = append(resolved, token{elem: Bold(resolve(content))})
+					resolved = append(resolved, token{elem: Bold(markup.resolve(content))})
 				} else {
-					resolved = append(resolved, token{elem: Emphasis(resolve(content))})
+					resolved = append(resolved, token{elem: Emphasis(markup.resolve(content))})
 				}
 
 				s = e - 1
@@ -156,7 +160,7 @@ func resolveSimple(tokens []token, links bool) (resolved []token) {
 	return
 }
 
-func resolveText(tokens []token) (resolved []token) {
+func (markup markup) text(tokens []token) (resolved []token) {
 	text := ""
 	for _, t := range tokens {
 		if t.isempty() {
@@ -178,17 +182,17 @@ func resolveText(tokens []token) (resolved []token) {
 	return
 }
 
-func rawtext(tokens []token) (text string) {
+func (markup markup) rawtext(tokens []token) (text string) {
 	for _, t := range tokens {
 		text += t.String()
 	}
 	return
 }
 
-func resolve(tokens []token) []Inline {
-	tokens = resolveSimple(tokens, true)
-	tokens = resolveSimple(tokens, false)
-	tokens = resolveText(tokens)
+func (markup markup) resolve(tokens []token) []Inline {
+	tokens = markup.simple(tokens, true)
+	tokens = markup.simple(tokens, false)
+	tokens = markup.text(tokens)
 	var inlines []Inline
 	for _, t := range tokens {
 		if t.elem == nil {
@@ -199,8 +203,8 @@ func resolve(tokens []token) []Inline {
 	return inlines
 }
 
-func linesToParagraph(lines []string) *Paragraph {
-	return &Paragraph{resolve(tokenizeLines(lines))}
+func (parse *parse) linesToParagraph(lines []string) *Paragraph {
+	return &Paragraph{markup{parse}.resolve(tokenizeLines(lines))}
 }
 
 /* tokenization */

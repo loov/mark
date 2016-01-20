@@ -153,6 +153,13 @@ func TestInclude(t *testing.T) {
 			"main/sub/include2.md": "Content",
 		},
 		Exp: Seq(Para(Text("Content"))),
+	}, { // absolute include
+		In: "{{main/include.md}}",
+		FS: mark.VirtualDir{
+			"main/include.md":   "{{/main2/include2.md}}",
+			"main2/include2.md": "Content",
+		},
+		Exp: Seq(Para(Text("Content"))),
 	}, { // include in quote
 		In: "> {{include.md}}",
 		FS: mark.VirtualDir{

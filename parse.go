@@ -10,7 +10,7 @@ import (
 
 type parse struct {
 	fs     FileSystem
-	path   string
+	path   string // relative to fs root
 	reader *reader
 	*state
 
@@ -131,7 +131,7 @@ func (parse *parse) flushParagraph() {
 		return
 	}
 
-	para := linesToParagraph(parse.partial.lines)
+	para := parse.linesToParagraph(parse.partial.lines)
 	seq := parse.currentSequence(lastlevel)
 	if parse.partial.class != "" {
 		seq.Append(&Modifier{
@@ -278,7 +278,7 @@ func (parse *parse) setext() {
 	}
 
 	parse.partial.lines[0] = strings.TrimSpace(parse.partial.lines[0])
-	section.Title = *linesToParagraph(parse.partial.lines)
+	section.Title = *parse.linesToParagraph(parse.partial.lines)
 	parse.partial.lines = nil
 
 	seq := parse.currentSequence(section.Level)
@@ -406,33 +406,45 @@ func (parent *parse) hasPath(path string) bool {
 	return false
 }
 
+func (parser *parse) reltoabs(ref string) string {
+	// is it an absolute path?
+	if strings.HasPrefix(ref, "/") ||
+		strings.HasPrefix(ref, "http://") ||
+		strings.HasPrefix(ref, "https://") ||
+		strings.HasPrefix(ref, "mailto:") {
+		return ref
+	}
+
+	return path.Clean(path.Join(path.Dir(parser.path), ref))
+}
+
 func (parent *parse) include() {
 	parentreader := parent.reader
 	parent.flushParagraph()
 
 	parentreader.ignoreN('{', 2)
-	parentreader.ignoreTrailing('}')
+	parentreader.ignoreTrailingN('}', 2)
 
 	file := strings.TrimSpace(parentreader.rest())
-	rel := path.Clean(path.Join(path.Dir(parent.path), file))
+	abs := parent.reltoabs(file)
 
 	child := &parse{
 		fs:     parent.fs,
-		path:   rel,
+		path:   abs,
 		state:  &state{},
 		reader: &reader{},
 
 		parent: parent,
 	}
 
-	if parent.hasPath(rel) {
-		parent.check(fmt.Errorf("Cannot recursively include %v", rel))
+	if parent.hasPath(abs) {
+		parent.check(fmt.Errorf("Cannot recursively include %v", abs))
 		return
 	}
 
-	content, err := child.fs.ReadFile(rel)
+	content, err := child.fs.ReadFile(abs)
 	if err != nil {
-		parent.check(fmt.Errorf("Failed to read file %v: %v", rel, err))
+		parent.check(fmt.Errorf("Failed to read file %v: %v", abs, err))
 		return
 	}
 
@@ -458,7 +470,7 @@ func (parse *parse) line() {
 
 func (parse *parse) inline() *Paragraph {
 	reader := parse.reader
-	return linesToParagraph([]string{reader.rest()})
+	return parse.linesToParagraph([]string{reader.rest()})
 }
 
 func order(xs ...int) bool {
