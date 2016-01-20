@@ -114,7 +114,7 @@ func (tc *TestCase) Run(br string, i int, t *testing.T) (ok bool) {
 		outs := strconv.Quote(html.Convert(out))
 		exps := strconv.Quote(html.Convert(tc.Exp))
 		t.Errorf("#%d%s invalid output:\ngot %v\nexp %v", i, br, outs, exps)
-		/* verbose
+		/* verbose *-/
 		pretty.Println(out)
 		pretty.Println(tc.Exp)
 		/**/

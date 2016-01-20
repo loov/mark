@@ -93,11 +93,12 @@ func TestLinks(t *testing.T) {
 		In:  "[title](http://example.com)",
 		Exp: Seq(Para(Link("http://example.com", Text("title")))),
 	}, { // link with injection
-		In: "[title](\"http://example.com)",
+		In: "[title](\"http://example.com)", // this can be falky due to path.Clean
 		Exp: ifthen(protectInjection,
 			Seq(Para(Link("#ZgotmplZ", Text("title")))),
-			Seq(Para(Link("\"http://example.com", Text("title")))),
+			Seq(Para(Link("\"http:/example.com", Text("title")))),
 		),
+		Errs: []string{"main.md:1: Cannot find file \"http:/example.com"},
 	}, { // link with injection 2
 		In: "[title](javascript:console.log('hello'))",
 		Exp: ifthen(protectInjection,

@@ -43,14 +43,13 @@ type state struct {
 	}
 }
 
-func ParseFile(filename string) (Sequence, []error) {
-	dir := Dir(filepath.Dir(filename))
-	name := filepath.Base(filename)
-	data, err := dir.ReadFile(name)
+func ParseFile(fs FileSystem, filename string) (Sequence, []error) {
+	name := filepath.ToSlash(filename)
+	data, err := fs.ReadFile(name)
 	if err != nil {
 		return nil, []error{err}
 	}
-	return ParseContent(dir, name, data)
+	return ParseContent(fs, name, data)
 }
 
 func ParseContent(fs FileSystem, filename string, content []byte) (Sequence, []error) {
@@ -407,15 +406,22 @@ func (parent *parse) hasPath(path string) bool {
 }
 
 func (parser *parse) reltoabs(ref string) string {
-	// is it an absolute path?
-	if strings.HasPrefix(ref, "/") ||
-		strings.HasPrefix(ref, "http://") ||
-		strings.HasPrefix(ref, "https://") ||
-		strings.HasPrefix(ref, "mailto:") {
+	// is it an absolute or non-local
+	if strings.HasPrefix(ref, "/") || !isLocalPath(ref) {
 		return ref
 	}
 
 	return path.Clean(path.Join(path.Dir(parser.path), ref))
+}
+
+func (parser *parse) checkPathExists(p string) {
+	if isLocalPath(p) {
+		if parser.fs == nil {
+			parser.check(fmt.Errorf("Cannot find file %s", p))
+		} else if err := parser.fs.FileExists(p); err != nil {
+			parser.check(fmt.Errorf("Cannot find file %s: %s", p, err))
+		}
+	}
 }
 
 func (parent *parse) include() {

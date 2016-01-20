@@ -84,10 +84,13 @@ func (markup markup) simple(tokens []token, links bool) (resolved []token) {
 				link[0].level--
 				link[len(link)-1].level--
 
+				href := markup.reltoabs(markup.rawtext(link))
+				markup.checkPathExists(href)
+
 				resolved = append(resolved, token{
 					elem: Image{
 						Alt:  Paragraph{markup.resolve(caption)},
-						Href: markup.rawtext(link), //TODO: use the current working directory
+						Href: href,
 					},
 				})
 				s = linkend
@@ -117,10 +120,13 @@ func (markup markup) simple(tokens []token, links bool) (resolved []token) {
 				link[0].level--
 				link[len(link)-1].level--
 
+				href := markup.reltoabs(markup.rawtext(link))
+				markup.checkPathExists(href)
+
 				resolved = append(resolved, token{
 					elem: Link{
 						Title: Paragraph{markup.resolve(caption)},
-						Href:  markup.rawtext(link),
+						Href:  href,
 					},
 				})
 				s = linkend
