@@ -132,6 +132,38 @@ func TestIndentCode(t *testing.T) {
 	}}.Run(t)
 }
 
+func TestList(t *testing.T) {
+	TestCases{{ // basic
+		In: "* alpha",
+		Exp: Seq(Ul(
+			Seq(Para(Text("alpha"))),
+		)),
+	}, { // whitespace rules
+		In: "   *   alpha",
+		Exp: Seq(Ul(
+			Seq(Para(Text("alpha"))),
+		)),
+	}, { // multiple items
+		In: "* alpha\n* beta",
+		Exp: Seq(Ul(
+			Seq(Para(Text("alpha"))),
+			Seq(Para(Text("beta"))),
+		)),
+	}, { // multiple items with spacing
+		In: " * alpha\n   * beta",
+		Exp: Seq(Ul(
+			Seq(Para(Text("alpha"))),
+			Seq(Para(Text("beta"))),
+		)),
+	}, { // multiline items
+		In: "* alpha\n  gamma\n* beta\n  delta",
+		Exp: Seq(Ul(
+			Seq(Para(Text("alpha"), SB, Text("gamma"))),
+			Seq(Para(Text("beta"), SB, Text("delta"))),
+		)),
+	}}.Run(t)
+}
+
 func TestInclude(t *testing.T) {
 	TestCases{{ // simple include
 		In: "{{include.md}}",
